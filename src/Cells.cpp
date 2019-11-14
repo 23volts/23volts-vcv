@@ -244,7 +244,9 @@ struct Cells : Module {
 		outputs[NOT_GATE_OUTPUT].setVoltage(isNot ? 10.f : 0.f);
 		outputs[OR_GATE_OUTPUT].setVoltage(isOrGate ? 10.f : isOrTick ? inputs[TICK_INPUT].getVoltage() : 0.f);
 
-		if(densityConnected) outputs[DENSITY_CV_OUTPUT].setVoltage(10.f * (getCellCount() / GRID_SIZE));
+		if(densityConnected) {
+			outputs[DENSITY_CV_OUTPUT].setVoltage(10.f * ((float) getCellCount() / GRID_SIZE));
+		}
 
 		if(infiniteLoopConnected) outputs[INFINITE_LOOP_GATE_OUTPUT].setVoltage(eolPulse.process(1.0f) ? 10.f : 0.f);
 		
@@ -295,7 +297,7 @@ struct Cells : Module {
 		
 		// Check current algorithm
 		if(algoConnected) {
-			float cv = clamp(inputs[ALGO_CV_INPUT].getVoltage(), 0.0f, 10.f);
+			float cv = clamp(inputs[ALGO_CV_INPUT].getVoltage(), 0.01f, 10.f);
 			//setAlgorithm(std::floor((cv / 10.f) * algorithms.size()));
 			setAlgorithm(rangeToIndex(cv, algorithms.size(), 0.0f, 10.f));
 		}
