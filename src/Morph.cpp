@@ -218,7 +218,7 @@ struct MorphDisplay : OpaqueWidget
 	std::shared_ptr<Font> font;
 
 	MorphDisplay() {
-		font = APP->window->loadFont(asset::plugin(pluginInstance, "res/Bebas-Regular.ttf"));
+		font = APP->window->loadFont(asset::plugin(pluginInstance, "res/fonts/Bebas-Regular.ttf"));
 	}
 
 	void draw(const DrawArgs &args) override {
