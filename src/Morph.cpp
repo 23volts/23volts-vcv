@@ -1,4 +1,5 @@
 #include "23volts.hpp"
+#include "widgets/knobs.hpp"
 
 struct ParameterSnapshot
 {
@@ -329,14 +330,14 @@ struct MorphWidget : ModuleWidget {
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(18.5, 68)), module, Morph::X_CV_INPUT));
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(48.5, 68)), module, Morph::Y_CV_INPUT));
 
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(11, 80)), module, Morph::KNOB_PARAMS + 0));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(26, 80)), module, Morph::KNOB_PARAMS + 1));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(41, 80)), module, Morph::KNOB_PARAMS + 2));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(55, 80)), module, Morph::KNOB_PARAMS + 3));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(11, 104)), module, Morph::KNOB_PARAMS + 4));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(26, 104)), module, Morph::KNOB_PARAMS + 5));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(41, 104)), module, Morph::KNOB_PARAMS + 6));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(55, 104)), module, Morph::KNOB_PARAMS + 7));
+		addParam(createParamCentered<KnobWhite32>(mm2px(Vec(11, 80)), module, Morph::KNOB_PARAMS + 0));
+		addParam(createParamCentered<KnobWhite32>(mm2px(Vec(26, 80)), module, Morph::KNOB_PARAMS + 1));
+		addParam(createParamCentered<KnobWhite32>(mm2px(Vec(41, 80)), module, Morph::KNOB_PARAMS + 2));
+		addParam(createParamCentered<KnobWhite32>(mm2px(Vec(55, 80)), module, Morph::KNOB_PARAMS + 3));
+		addParam(createParamCentered<KnobWhite32>(mm2px(Vec(11, 104)), module, Morph::KNOB_PARAMS + 4));
+		addParam(createParamCentered<KnobWhite32>(mm2px(Vec(26, 104)), module, Morph::KNOB_PARAMS + 5));
+		addParam(createParamCentered<KnobWhite32>(mm2px(Vec(41, 104)), module, Morph::KNOB_PARAMS + 6));
+		addParam(createParamCentered<KnobWhite32>(mm2px(Vec(55, 104)), module, Morph::KNOB_PARAMS + 7));
 
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(11, 92)), module, Morph::OUTPUTS + 0));
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(26, 92)), module, Morph::OUTPUTS + 1));
