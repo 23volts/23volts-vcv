@@ -1,6 +1,7 @@
 #include "23volts.hpp"
-#include "vector"
-#include "string"
+//#include "vector"
+//#include "string"
+#include "widgets/ports.hpp"
 
 struct MemoryBank {
 	private:

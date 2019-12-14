@@ -1,5 +1,5 @@
 #include "23volts.hpp"
-
+#include "widgets/ports.hpp"
 
 struct Merge8 : Module {
 	enum ParamIds {
@@ -18,13 +18,10 @@ struct Merge8 : Module {
 		NUM_LIGHTS
 	};
 
-
-	dsp::ClockDivider clockLightDivider;
 	int channels;
 
 	Merge8() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		clockLightDivider.setDivision(512);
 		onReset();
 	}
 
@@ -44,13 +41,6 @@ struct Merge8 : Module {
 		}
 
 		outputs[OUT_OUTPUT].channels = (channels >= 0) ? channels : (lastChannel + 1);
-
-		if (clockLightDivider.process()) {
-			for (int c = 0; c < 8; c++) {
-				bool active = (c < outputs[OUT_OUTPUT].getChannels());
-				lights[CHANNEL_LIGHTS + c].setBrightness(active);
-			}
-		}
 	}
 
 	json_t* dataToJson() override {
@@ -113,16 +103,9 @@ struct Merge8Widget : ModuleWidget {
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 81.452)), module, Merge8::INPUTS + 6));
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 91.54)), module, Merge8::INPUTS + 7));
 
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.6, 107.18)), module, Merge8::OUT_OUTPUT));
-
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(4.805, 99.504)), module, Merge8::CHANNEL_LIGHTS + 0));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(6.393, 99.504)), module, Merge8::CHANNEL_LIGHTS + 1));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(7.98, 99.504)), module, Merge8::CHANNEL_LIGHTS + 2));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(9.568, 99.504)), module, Merge8::CHANNEL_LIGHTS + 3));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(4.805, 101.091)), module, Merge8::CHANNEL_LIGHTS + 4));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(6.393, 101.091)), module, Merge8::CHANNEL_LIGHTS + 5));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(7.98, 101.091)), module, Merge8::CHANNEL_LIGHTS + 6));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(9.568, 101.091)), module, Merge8::CHANNEL_LIGHTS + 7));
+		PolyLightPort<8>* output = createOutputCentered<PolyLightPort<8>>(mm2px(Vec(7.6, 105.18)), module, Merge8::OUT_OUTPUT);
+		output->offset = 11;
+		addOutput(output);
 	}
 
 	void appendContextMenu(Menu* menu) override {

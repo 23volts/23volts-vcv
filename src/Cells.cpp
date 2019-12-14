@@ -1,13 +1,6 @@
 #include "23volts.hpp"
-
-
-// Helper functions
-
-int rangeToIndex(float value, int size, float rangeMin, float rangeMax) {
-	float range = rangeMax - rangeMin;
-	float ratio = value / range;
-	return std::ceil(ratio * size) - 1;
-}
+#include "helpers.hpp"
+#include "widgets/ports.hpp"
 
 
 struct CellularAlgorithm {
@@ -112,7 +105,7 @@ struct Cells : Module {
 	static const int GRID_SIZE = GRID_LINES * GRID_COLUMNS;
 	static const int GATE_OUTPUTS_TOTAL = (GRID_COLUMNS / 3 - 1) * (GRID_LINES / 3 - 1);
 	static const int GATE_OUTPUTS_PER_LINE = GRID_COLUMNS / 3 - 1;
-	static const int EOL_DETECTOR_DEPTH = 7;
+	static const int EOL_DETECTOR_DEPTH = 23;
 
 	enum ParamIds {
 		NUM_PARAMS
@@ -244,7 +237,9 @@ struct Cells : Module {
 		outputs[NOT_GATE_OUTPUT].setVoltage(isNot ? 10.f : 0.f);
 		outputs[OR_GATE_OUTPUT].setVoltage(isOrGate ? 10.f : isOrTick ? inputs[TICK_INPUT].getVoltage() : 0.f);
 
-		if(densityConnected) outputs[DENSITY_CV_OUTPUT].setVoltage(10.f * (getCellCount() / GRID_SIZE));
+		if(densityConnected) {
+			outputs[DENSITY_CV_OUTPUT].setVoltage(10.f * ((float) getCellCount() / GRID_SIZE));
+		}
 
 		if(infiniteLoopConnected) outputs[INFINITE_LOOP_GATE_OUTPUT].setVoltage(eolPulse.process(1.0f) ? 10.f : 0.f);
 		
@@ -277,8 +272,8 @@ struct Cells : Module {
 		float density = random::uniform() * 0.6f + 0.4f;
 		Organism organism = Organism(density);
 
-		int orgX = std::floor(random::uniform() * GRID_COLUMNS);
-		int orgY = std::floor(random::uniform() * GRID_LINES);
+		int orgX = std::floor(random::uniform() * GRID_COLUMNS / 2.f + GRID_COLUMNS / 8.f);
+		int orgY = std::floor(random::uniform() * GRID_LINES / 2.f + GRID_LINES / 8.f) ;
 
 		for(int x = 0; x < organism.sizeX; x++) {
 			for(int y = 0; y < organism.sizeY; y++) {
@@ -295,7 +290,7 @@ struct Cells : Module {
 		
 		// Check current algorithm
 		if(algoConnected) {
-			float cv = clamp(inputs[ALGO_CV_INPUT].getVoltage(), 0.0f, 10.f);
+			float cv = clamp(inputs[ALGO_CV_INPUT].getVoltage(), 0.01f, 10.f);
 			//setAlgorithm(std::floor((cv / 10.f) * algorithms.size()));
 			setAlgorithm(rangeToIndex(cv, algorithms.size(), 0.0f, 10.f));
 		}

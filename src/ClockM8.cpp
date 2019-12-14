@@ -1,12 +1,5 @@
 #include "23volts.hpp"
-
-bool hasDecimals(float number) {
-	return (number - (int) number) > 0.f;
-}
-
-float round3(float number) {
-	return (float) std::round(number * 100) / 100;
-}
+#include "helpers.hpp"
 
 struct ClockFollower {
 
@@ -370,7 +363,6 @@ struct ClockM8 : Module {
 	bool quantizeOdd = false;
 	bool quantizeDotted = true;
 
-	//const float ratioValues[19] = {1, 1.f/ (3.f/4.f), 1.5f, 2, 2.5f, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 	const float binaryValues[9] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
 	const float ternaryValues[7] = {3, 6, 12, 24, 48, 96, 192};
 	const float dottedBinaryMultiplicators[1] = {1.f/ (3.f/4.f)};
@@ -378,10 +370,7 @@ struct ClockM8 : Module {
 	const float dottedOddMultiplicators[1] = {2.5f};
 	const float dottedBinaryDividers[8] = {1.5f, 3, 6, 12, 24, 48, 96, 192};
 	const float dottedTernaryDividers[1] = {2.5f}; 
-
-	//const float dottedValues[3] = {1.f/ (3.f/4.f), 1.5f, 2.5f};
 	const float oddValues[8] = {5,7,9,10,11,13,14,15};
-	//int RAW_RATIO_COUNT = 19;
 	int BINARY_VALUES_COUNT = 9;
 	int TERNARY_VALUES_COUNT = 7;
 	int DOTTED_BIN_MULT_COUNT = 1;
@@ -392,8 +381,6 @@ struct ClockM8 : Module {
 	int ODD_VALUES_COUNT = 8;
 
 	int outputMode = ClockModulator::MODE_GATE;
-
-	//std::vector<float> currentRatios;
 
 	std::vector<float> currentMultiplicators;
 	std::vector<float> currentDividers;
@@ -589,13 +576,11 @@ struct ClockM8 : Module {
 	}
 
 	void updateCurrentRatios() {
-		//currentRatios.clear();
 		currentDividers.clear();
 		currentMultiplicators.clear();
 
 		if(quantizeBinary) {
 			for(int i=0; i<BINARY_VALUES_COUNT; i++) {
-				//currentRatios.push_back(binaryValues[i]);
 				currentDividers.push_back(binaryValues[i]);
 				currentMultiplicators.push_back(binaryValues[i]);
 			}
@@ -603,7 +588,6 @@ struct ClockM8 : Module {
 		}
 		if(quantizeTernary) {
 			for(int i=0; i<TERNARY_VALUES_COUNT; i++) {
-				//currentRatios.push_back(ternaryValues[i]);
 				currentDividers.push_back(ternaryValues[i]);
 				currentMultiplicators.push_back(ternaryValues[i]);
 			}
@@ -627,14 +611,12 @@ struct ClockM8 : Module {
 		}
 		if(quantizeDotted && quantizeOdd) {
 			for(int i=0; i<DOTTED_ODD_MULT_COUNT; i++) {
-				//currentRatios.push_back(dottedValues[i]);
 				currentMultiplicators.push_back(dottedOddMultiplicators[i]);
 			}
 		}
 
 		if(quantizeOdd) {
 			for(int i=0; i<ODD_VALUES_COUNT; i++) {
-				//currentRatios.push_back(oddValues[i]);
 				currentDividers.push_back(oddValues[i]);
 				currentMultiplicators.push_back(oddValues[i]);
 			}
@@ -645,7 +627,6 @@ struct ClockM8 : Module {
 		currentMultiplicators.push_back(1.f);
 
 		// remove duplicate elements
-    	//std::sort(currentRatios.begin(), currentRatios.end());
     	std::sort(currentDividers.begin(), currentDividers.end());
     	auto lastDivider = std::unique(currentDividers.begin(), currentDividers.end());
     	currentDividers.erase(lastDivider, currentDividers.end()); 
@@ -654,9 +635,6 @@ struct ClockM8 : Module {
     	std::sort(currentMultiplicators.begin(), currentMultiplicators.end());
     	auto lastMultiplicator = std::unique(currentMultiplicators.begin(), currentMultiplicators.end());
     	currentMultiplicators.erase(lastMultiplicator, currentMultiplicators.end()); 
-
-    	/*auto last = std::unique(currentRatios.begin(), currentRatios.end());
-    	currentRatios.erase(last, currentRatios.end()); */
 	}
 
 	void onSampleRateChange() override {
@@ -757,7 +735,6 @@ struct ClockModulatorDisplay : TransparentWidget {
 		fb = new FramebufferWidget();
 		fb->box.size = size;
 		addChild(fb);
-		//auto fontFileName = "res/fonts/REGISTER.TTF";
 		auto fontFileName = "res/fonts/EHSMB.TTF";
 		std::shared_ptr<Font> font = APP->window->loadFont(asset::plugin(pluginInstance, fontFileName));
 		label = new TextLabel(font);

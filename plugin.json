@@ -1,7 +1,7 @@
 {
   "slug": "23volts",
   "name": "23volts",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "GPL-3.0-only",
   "brand": "23volts",
   "author": "R\u00e9mi Collin",
@@ -77,6 +77,33 @@
       "tags": [
         "Clock Modulator",
         "Polyphonic"
+      ]
+    },
+    {
+      "slug": "PolyMerge",
+      "name": "PolyMerge",
+      "description": "Merge N polyphonic inputs to 1 polyphonic output",
+      "tags": [
+        "Polyphonic",
+        "Utility"
+      ]
+    },
+    {
+      "slug": "PolySplit",
+      "name": "PolySplit",
+      "description": "Splits 1 polyphonic input to N polyphonic outputs",
+      "tags": [
+        "Polyphonic",
+        "Utility"
+      ]
+    },
+    {
+      "slug": "MonoPoly",
+      "name": "MonoPoly",
+      "description": "Copy a mono channel to N polyphonic channels",
+      "tags": [
+        "Polyphonic",
+        "Util"
       ]
     }
   ]

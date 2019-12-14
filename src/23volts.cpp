@@ -12,7 +12,10 @@ void init(Plugin *p) {
 	p->addModel(modelClockM8);
 	p->addModel(modelMem);
 	p->addModel(modelMerge8);
+	p->addModel(modelMonoPoly);
 	p->addModel(modelMorph);
+	p->addModel(modelPolyMerge);
+	p->addModel(modelPolySplit);
 	p->addModel(modelSplit8);
 	p->addModel(modelSwitchN1);
 	// Any other plugin initialization may go here.

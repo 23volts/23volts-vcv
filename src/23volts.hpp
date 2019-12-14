@@ -11,6 +11,9 @@ extern Model* modelClockM8;
 extern Model* modelMorph;
 extern Model* modelMem;
 extern Model* modelMerge8;
+extern Model* modelMonoPoly;
+extern Model* modelPolyMerge;
+extern Model* modelPolySplit;
 extern Model* modelSplit8;
 extern Model* modelSwitchN1;
 
@@ -55,13 +58,6 @@ struct LightGridFactory {
 	}
 };
 
-struct InvisiblePort : SvgPort {
-	InvisiblePort() {
-		setSvg(APP->window->loadSvg(asset::system("res/ComponentLibrary/PJ3410.svg")));
-		shadow->opacity = 0.01f;
-		sw->visible = false;
-	}
-};
 
 struct MonochromeGridDisplay : OpaqueWidget {
 	int columns;
