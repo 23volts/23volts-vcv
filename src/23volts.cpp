@@ -7,12 +7,19 @@ Plugin *pluginInstance;
 void init(Plugin *p) {
 	pluginInstance = p;
 
-	// Add modules here
 	p->addModel(modelCells);
 	p->addModel(modelClockM8);
 	p->addModel(modelMem);
+	p->addModel(modelMerge4);
 	p->addModel(modelMerge8);
+	p->addModel(modelMidiPC);
+	p->addModel(modelMonoPoly);
 	p->addModel(modelMorph);
+	p->addModel(modelMultimapK);
+	p->addModel(modelMultimapS);
+	p->addModel(modelPolySplit);
+	p->addModel(modelPolyMerge);
+	p->addModel(modelSplit4);
 	p->addModel(modelSplit8);
 	p->addModel(modelSwitchN1);
 	// Any other plugin initialization may go here.

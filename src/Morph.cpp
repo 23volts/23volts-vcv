@@ -1,18 +1,11 @@
 #include "23volts.hpp"
+#include "widgets/knobs.hpp"
+#include "widgets/ports.hpp"
+#include "common/mapping.hpp"
 
-struct ParameterSnapshot
-{
-	bool isSet = false;
-	float values[8];
-
-	ParameterSnapshot()
-	{
-		for (int x = 0; x < 8; x++) {
-			values[x] = 0.0f;
-		}
-	}
+struct ParameterSnapshot {
+	float values[8] = {};
 };
-
 
 struct Morph : Module {
 	enum ParamIds {
@@ -32,6 +25,9 @@ struct Morph : Module {
 		NUM_LIGHTS
 	};
 
+	MappingProcessor mappingProcessor;
+	HandleMapCollection handleMap;
+
 	ParameterSnapshot snapshots[4];
 
 	float offsetX = 0;
@@ -45,12 +41,23 @@ struct Morph : Module {
 	bool inputY = false;
 	dsp::ClockDivider XYInputCheckDivider;
 
+	int writingSnapshot = 0;
+
 	Morph() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		for(int x = 0; x < 8; x++) {
 			configParam(KNOB_PARAMS + x, -10.0, 10.0, 0.0, string::f("Knob %d", x));	
 		}
 		XYInputCheckDivider.setDivision(64);
+		init();
+	}
+
+	void init() {
+		mappingProcessor.handleMap = &handleMap;
+
+		for(int paramId = 0; paramId < NUM_PARAMS; paramId++) {
+			mappingProcessor.params[paramId] = paramQuantities[paramId];
+		}
 	}
 
 	void process(const ProcessArgs& args) override {
@@ -58,6 +65,10 @@ struct Morph : Module {
 		if (XYInputCheckDivider.process()) {
 			inputX = inputs[X_CV_INPUT].isConnected();
 			inputY = inputs[Y_CV_INPUT].isConnected();
+		}
+
+		if(writingSnapshot > -1) {
+			updateSnapshot();
 		}
 
 		if(inputX) {
@@ -75,33 +86,14 @@ struct Morph : Module {
 		for (int x = 0; x < 8; x++) {
 			outputs[OUTPUTS + x].setVoltage(params[KNOB_PARAMS + x].getValue());
 		}
+
+		mappingProcessor.process();
 	}
 
-	void setSnapshot(int index) {
+	void updateSnapshot() {
 		for(int x = 0; x < 8; x++) {
-			snapshots[index].values[x] = params[KNOB_PARAMS + x].getValue();
+			snapshots[writingSnapshot].values[x] = params[KNOB_PARAMS + x].getValue();
 		}
-
-		switch(index) {
-			case 0:
-				selectorX = 0;
-				selectorY = 0;
-				break;
-			case 1:
-				selectorX = maxX;
-				selectorY = 0;
-				break;
-			case 2: 
-				selectorX = 0;
-				selectorY = maxY;
-				break;
-			case 3:
-				selectorX = maxX;
-				selectorY = maxY;
-				break;
-		}
-
-		snapshots[index].isSet = true;
 	}
 
 	void move(float x, float y) {
@@ -111,7 +103,24 @@ struct Morph : Module {
 		if(selectorY < 0) selectorY = 0;
 		if(selectorX > maxX) selectorX = maxX;
 		if(selectorY > maxY) selectorY = maxY;
+		writingSnapshot = getWritingSnapshot();
 		updateParameters();
+	}
+
+	int getWritingSnapshot() {
+		if(selectorX == 0 && selectorY == 0) {
+			return 0;
+		}
+		if(selectorX == maxX && selectorY == 0) {
+			return 1;
+		}
+		if(selectorX == 0 && selectorY == maxY) {
+			return 2;
+		}
+		if(selectorX == maxX && selectorY == maxY) {
+			return 3;
+		}
+		return -1;
 	}
 
 	float getX() const {
@@ -151,11 +160,11 @@ struct Morph : Module {
 		for(int x = 0; x < 4; x++) {
 			snapshots[x] = ParameterSnapshot();
 		}
+		handleMap.clear();
 	}
 
 	void onRandomize() override {
 		for(int x = 0; x < 4; x++) {
-			snapshots[x].isSet = true;
 			for(int y = 0; y <8; y++) {
 				snapshots[x].values[y] = 10.f - 20 * random::uniform();
 			}
@@ -177,13 +186,8 @@ struct Morph : Module {
 			json_array_insert_new(snapshotsJ, i, snapshotJ);
 		}
 		json_object_set_new(rootJ, "snapshots", snapshotsJ);
-
-		json_t* snapshotSetsJ = json_array();
-		for (int i = 0; i < 4; i++) {
-			json_array_insert_new(snapshotSetsJ, i, json_boolean(snapshots[i].isSet));	
-		}
-		json_object_set_new(rootJ, "snapshotSets", snapshotSetsJ);
-
+		json_object_set_new(rootJ, "handle_map", handleMap.toJson());
+		json_object_set_new(rootJ, "writing_snapshot", json_integer(writingSnapshot));
 		return rootJ;
 	}
 
@@ -203,11 +207,14 @@ struct Morph : Module {
 			}
 		}
 
-		json_t* snapshotSetsJ = json_object_get(rootJ, "snapshotSets");
-		if(snapshotSetsJ) {
-			for (int i = 0; i < 4; i++) {
-				snapshots[i].isSet = json_is_true(json_array_get(snapshotSetsJ, i));
-			}
+		json_t* handleMapJ = json_object_get(rootJ, "handle_map");
+		if(handleMapJ) {
+			handleMap.fromJson(handleMapJ);
+		}
+
+		json_t* writingSnapshotJ = json_object_get(rootJ, "writing_snapshot");
+		if(writingSnapshotJ) {
+			writingSnapshot = json_integer_value(writingSnapshotJ);
 		}
 	}
 };
@@ -245,28 +252,31 @@ struct MorphDisplay : OpaqueWidget
 		nvgFontSize(args.vg, 64);
 		nvgFontFaceId(args.vg, font->handle);
 		
-		if(module && module->snapshots[0].isSet) {
+		if(module && module->writingSnapshot == 0) {
 			nvgFillColor(args.vg, selectorColor);
 		}
 		else {
 			nvgFillColor(args.vg, fixedColor);
 		}
 		nvgText(args.vg, box.size.x / 5 , box.size.y / 2.7, "A", NULL);
-		if(module && module->snapshots[1].isSet) {
+
+		if(module && module->writingSnapshot == 1) {
 			nvgFillColor(args.vg, selectorColor);
 		}
 		else {
 			nvgFillColor(args.vg, fixedColor);
 		}
 		nvgText(args.vg, box.size.x - box.size.x / 3 , box.size.y / 2.7, "B", NULL);
-		if(module && module->snapshots[2].isSet) {
+
+		if(module && module->writingSnapshot == 2) {
 			nvgFillColor(args.vg, selectorColor);
 		}
 		else {
 			nvgFillColor(args.vg, fixedColor);
 		}
 		nvgText(args.vg, box.size.x / 5 , box.size.y - box.size.y / 7 , "C", NULL);
-		if(module && module->snapshots[3].isSet) {
+		
+		if(module && module->writingSnapshot == 3) {
 			nvgFillColor(args.vg, selectorColor);
 		}
 		else {
@@ -275,29 +285,24 @@ struct MorphDisplay : OpaqueWidget
 		nvgText(args.vg, box.size.x - box.size.x / 3  , box.size.y - box.size.y / 7 , "D", NULL);
 
 		if(module) {
-			nvgStrokeColor(args.vg, selectorColor);
+			// Offset version
+			nvgStrokeColor(args.vg, SCHEME_BLUE);
 			nvgStrokeWidth(args.vg, 2);
 			nvgBeginPath(args.vg);
 			nvgRect(args.vg, module->getX(), module->getY(), box.size.x / 2, box.size.y / 2);
 			nvgStroke(args.vg);
+
+			nvgStrokeColor(args.vg, selectorColor);
+			nvgStrokeWidth(args.vg, 2);
+			nvgBeginPath(args.vg);
+			nvgRect(args.vg, module->selectorX, module->selectorY, box.size.x / 2, box.size.y / 2);
+			nvgStroke(args.vg);
+
 		}
 	}
 
 	void onDragMove(const event::DragMove &e) override {
 		module->move(e.mouseDelta.x, e.mouseDelta.y);
-	}
-};
-
-struct SnapshotItem : MenuItem {
-	Morph* module;
-	int m_index;
-
-	SnapshotItem(int index) {
-		m_index = index;
-	}
-
-	void onAction(const event::Action& e) override {
-		module->setSnapshot(m_index);
 	}
 };
 
@@ -325,18 +330,26 @@ struct MorphWidget : ModuleWidget {
 			addChild(display);
 		}
 
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(10.f, 67.5f)), module, Morph::X_CV_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(19.5f, 67.5f)), module, Morph::Y_CV_INPUT));
 
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(18.5, 68)), module, Morph::X_CV_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(48.5, 68)), module, Morph::Y_CV_INPUT));
+		ParamMapButton* button = new ParamMapButton();
+		button->box.pos = mm2px(Vec(57.5f,65.2f));
+		button->light->bgColor = nvgRGBA(0xff, 0xff, 0xff, 0x99);
+		button->light->setColor(SCHEME_YELLOW);
+		button->light->borderColor = nvgRGBA(0xff, 0xff, 0xff, 0x00);
+		button->light->setBrightness(0.f);
+		if(module) button->paramMap = &module->handleMap;
+		addChild(button);
 
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(11, 80)), module, Morph::KNOB_PARAMS + 0));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(26, 80)), module, Morph::KNOB_PARAMS + 1));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(41, 80)), module, Morph::KNOB_PARAMS + 2));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(55, 80)), module, Morph::KNOB_PARAMS + 3));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(11, 104)), module, Morph::KNOB_PARAMS + 4));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(26, 104)), module, Morph::KNOB_PARAMS + 5));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(41, 104)), module, Morph::KNOB_PARAMS + 6));
-		addParam(createParamCentered<Rogan1PWhite>(mm2px(Vec(55, 104)), module, Morph::KNOB_PARAMS + 7));
+		createMappableParam<KnobWhite32>(mm2px(Vec(6, 75)), Morph::KNOB_PARAMS + 0);
+		createMappableParam<KnobWhite32>(mm2px(Vec(21, 75)), Morph::KNOB_PARAMS + 1);
+		createMappableParam<KnobWhite32>(mm2px(Vec(36, 75)), Morph::KNOB_PARAMS + 2);
+		createMappableParam<KnobWhite32>(mm2px(Vec(50, 75)), Morph::KNOB_PARAMS + 3);
+		createMappableParam<KnobWhite32>(mm2px(Vec(6, 99)), Morph::KNOB_PARAMS + 4);
+		createMappableParam<KnobWhite32>(mm2px(Vec(21, 99)), Morph::KNOB_PARAMS + 5);
+		createMappableParam<KnobWhite32>(mm2px(Vec(36, 99)), Morph::KNOB_PARAMS + 6);
+		createMappableParam<KnobWhite32>(mm2px(Vec(50, 99)), Morph::KNOB_PARAMS + 7);
 
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(11, 92)), module, Morph::OUTPUTS + 0));
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(26, 92)), module, Morph::OUTPUTS + 1));
@@ -348,32 +361,16 @@ struct MorphWidget : ModuleWidget {
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(55, 115)), module, Morph::OUTPUTS + 7));
 	}
 
-	void appendContextMenu(Menu* menu) override {
+	template <class TParamWidget>
+	void createMappableParam(math::Vec pos, int paramId) {
 		Morph* module = dynamic_cast<Morph*>(this->module);
-
-		menu->addChild(new MenuEntry);
-
-		SnapshotItem* item;
-
-		item = new SnapshotItem(0);
-		item->text = "Set snapshot A";
-		item->module = module;
-		menu->addChild(item);
-
-		item = new SnapshotItem(1);
-		item->text = "Set snapshot B";
-		item->module = module;
-		menu->addChild(item);
-
-		item = new SnapshotItem(2);
-		item->text = "Set snapshot C";
-		item->module = module;
-		menu->addChild(item);
-
-		item = new SnapshotItem(3);
-		item->text = "Set snapshot D";
-		item->module = module;
-		menu->addChild(item);
+		MappableParameter<TParamWidget>* param = createParam<MappableParameter<TParamWidget>>(pos, module, paramId);
+		param->paramId = paramId;
+		if(module) {
+			param->module = module;
+			param->handleMap = &module->handleMap;
+		}
+		addParam(param);
 	}
 };
 

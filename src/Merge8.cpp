@@ -1,5 +1,5 @@
 #include "23volts.hpp"
-
+#include "widgets/ports.hpp"
 
 struct Merge8 : Module {
 	enum ParamIds {
@@ -18,13 +18,10 @@ struct Merge8 : Module {
 		NUM_LIGHTS
 	};
 
-
-	dsp::ClockDivider clockLightDivider;
-	int channels;
+	int channels = -1;
 
 	Merge8() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		clockLightDivider.setDivision(512);
 		onReset();
 	}
 
@@ -44,13 +41,6 @@ struct Merge8 : Module {
 		}
 
 		outputs[OUT_OUTPUT].channels = (channels >= 0) ? channels : (lastChannel + 1);
-
-		if (clockLightDivider.process()) {
-			for (int c = 0; c < 8; c++) {
-				bool active = (c < outputs[OUT_OUTPUT].getChannels());
-				lights[CHANNEL_LIGHTS + c].setBrightness(active);
-			}
-		}
 	}
 
 	json_t* dataToJson() override {
@@ -66,7 +56,7 @@ struct Merge8 : Module {
 	}
 };
 
-struct MergeChannelItem : MenuItem {
+struct Merge8ChannelItem : MenuItem {
 	Merge8* module;
 	int channels;
 	void onAction(const event::Action& e) override {
@@ -75,12 +65,12 @@ struct MergeChannelItem : MenuItem {
 };
 
 
-struct MergeChannelsItem : MenuItem {
+struct Merge8ChannelsItem : MenuItem {
 	Merge8* module;
 	Menu* createChildMenu() override {
 		Menu* menu = new Menu;
 		for (int channels = -1; channels <= 8; channels++) {
-			MergeChannelItem* item = new MergeChannelItem;
+			Merge8ChannelItem* item = new Merge8ChannelItem;
 			if (channels < 0)
 				item->text = "Automatic";
 			else
@@ -104,25 +94,18 @@ struct Merge8Widget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 18.445)), module, Merge8::INPUTS + 0));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 29.215)), module, Merge8::INPUTS + 1));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 39.67)), module, Merge8::INPUTS + 2));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 50.007)), module, Merge8::INPUTS + 3));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 60.345)), module, Merge8::INPUTS + 4));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 70.735)), module, Merge8::INPUTS + 5));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 81.452)), module, Merge8::INPUTS + 6));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.7, 91.54)), module, Merge8::INPUTS + 7));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(6.7, 18.445)), module, Merge8::INPUTS + 0));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(6.7, 29.215)), module, Merge8::INPUTS + 1));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(6.7, 39.67)), module, Merge8::INPUTS + 2));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(6.7, 50.007)), module, Merge8::INPUTS + 3));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(6.7, 60.345)), module, Merge8::INPUTS + 4));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(6.7, 70.735)), module, Merge8::INPUTS + 5));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(6.7, 81.452)), module, Merge8::INPUTS + 6));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(6.7, 91.54)), module, Merge8::INPUTS + 7));
 
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.6, 107.18)), module, Merge8::OUT_OUTPUT));
-
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(4.805, 99.504)), module, Merge8::CHANNEL_LIGHTS + 0));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(6.393, 99.504)), module, Merge8::CHANNEL_LIGHTS + 1));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(7.98, 99.504)), module, Merge8::CHANNEL_LIGHTS + 2));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(9.568, 99.504)), module, Merge8::CHANNEL_LIGHTS + 3));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(4.805, 101.091)), module, Merge8::CHANNEL_LIGHTS + 4));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(6.393, 101.091)), module, Merge8::CHANNEL_LIGHTS + 5));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(7.98, 101.091)), module, Merge8::CHANNEL_LIGHTS + 6));
-		addChild(createLight<TinyLight<BlueLight>>(mm2px(Vec(9.568, 101.091)), module, Merge8::CHANNEL_LIGHTS + 7));
+		PolyLightPort<8>* output = createOutputCentered<PolyLightPort<8>>(mm2px(Vec(7.6, 105.18)), module, Merge8::OUT_OUTPUT);
+		output->offset = 11;
+		addOutput(output);
 	}
 
 	void appendContextMenu(Menu* menu) override {
@@ -130,7 +113,7 @@ struct Merge8Widget : ModuleWidget {
 
 		menu->addChild(new MenuEntry);
 
-		MergeChannelsItem* channelsItem = new MergeChannelsItem;
+		Merge8ChannelsItem* channelsItem = new Merge8ChannelsItem;
 		channelsItem->text = "Channels";
 		channelsItem->rightText = RIGHT_ARROW;
 		channelsItem->module = module;

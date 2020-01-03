@@ -3,6 +3,7 @@
 This is a free collection of modules for the [VCVRack](http://vcvrack.com) open source modular synthetizer.  
 
 ![23volts](res/img/23v-modules.png)
+![23volts](res/img/23v-modules-2.png)
 
 ## Cells
 
@@ -28,11 +29,13 @@ Cells is a "cellular automata" sequencer based on the [Conway's game of life](ht
 
 ## Morph
 
-Morph combines 8 offset generators with a XY Pad which allows to smoothly interpolate between four different "snapshots" of the offset knob's positions. This is a powerful tool for sound design and life performances. The offset can output from -10  to +10 volts. Right clicking to the context menu allow to store knobs positions to snaphots A,B,C,D.  
+Morph combines 8 offset generators with a XY Pad which allows to smoothly interpolate between four different "snapshots" of the offset knob's positions. This is a powerful tool for soundesign and live performances. The offset can output from -10  to +10 volts.  
 
 - **X** : allows CV control of the X axis. 
 
 - **Y** : allows CV Control of the Y axis
+
+Alternatively, clicking the **ASSIGN** allows for direct mapping of any parameters of other VCV rack modules. 
 
 ## ClockM8
 
@@ -62,7 +65,11 @@ Mem is a Sample & Hold with an internal memory & noise generator that allows for
 
 ## Merge8 + Split8
 
-Merge8 and Split8 are respectively a 8 channel polyphonic merger and a 8 channel splitter, only taking 3HP each.
+Merge8 and Split8 are respectively a 8 channels polyphonic merger and a 8 channels splitter, only taking 3HP each.
+
+## Merge4 + Split4
+
+Merge4 and Split4 are respectively a 2x4 channels polyphonic merger and a 2x4 channels splitter, only taking 3HP each.
 
 ## SwitchN1
 
@@ -78,6 +85,25 @@ The number of step is defined by the number of channels from the input.
 
 - **RND** : Switch to a random channel. 
 
+- **CV** : Offset the current step with a -5/+5volts signal
+
+## MIDI-PC
+
+MIDI-PC is a simple utility module aimed at sending and receiving MIDI Program Change message from and to VCV rack.
+
+## Multimap
+
+Multimap is a MIDI mapping tool with feedback which can use the same MIDI-CC or notes and assign them to up to 128 banks of different assignments inside VCV. 
+
+It comes in 2 versions; one version has 16 knobs and one version has 16 switches.
+
+## Mono Poly
+
+Mono poly takes a mono input and copy the signal to N polyphonic channels. The number of channels can be set by CV.
+
+## Polymerge & Polysplit
+
+Polymerge & Polysplit are channel-variable merger & splitter. Right click on the module allows for selecting the number of channels of the inputs / outputs.
 
 ## Contact
 

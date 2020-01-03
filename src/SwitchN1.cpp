@@ -1,4 +1,5 @@
 #include "23volts.hpp"
+#include "widgets/ports.hpp"
 
 struct SwitchN1 : Module {
 	enum ParamIds {
@@ -10,6 +11,7 @@ struct SwitchN1 : Module {
 		STEPINC_INPUT,
 		STEPDEC_INPUT,
 		RANDOM_INPUT,
+		RESET_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -17,16 +19,15 @@ struct SwitchN1 : Module {
 		NUM_OUTPUTS
 	};
 	enum LightIds {
-		ENUMS(CHANNEL_LIGHTS, 32), // 16 Green-Blue
 		NUM_LIGHTS
 	};
 
-	dsp::ClockDivider lightUpdater;
 	dsp::ClockDivider connectionUpdater;
 
 	dsp::SchmittTrigger stepIncreaseTrigger;
 	dsp::SchmittTrigger stepDecreaseTrigger;
 	dsp::SchmittTrigger stepRandomTrigger;
+	dsp::SchmittTrigger resetTrigger;
 
 	int channels = 0;
 	int activeChannel = -1;
@@ -37,18 +38,22 @@ struct SwitchN1 : Module {
 	bool increaseConnected = false;
 	bool decreaseConnected = false;
 	bool randomConnected = false;
+	bool resetConnected = false;
 
 	SwitchN1() {
 		connectionUpdater.setDivision(32);
-		lightUpdater.setDivision(512);
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 	}
 
 	void process(const ProcessArgs& args) override {
-		
+
 		channels = inputs[POLYIN_INPUT].getChannels();
 
 		if(connectionUpdater.process()) updateConnections();
+
+		if(resetConnected && resetTrigger.process(inputs[RESET_INPUT].getVoltage())) {
+			step = 0;
+		}
 
 		if (increaseConnected && stepIncreaseTrigger.process(inputs[STEPINC_INPUT].getVoltage())) {
 			step++;
@@ -77,8 +82,6 @@ struct SwitchN1 : Module {
 
 		if(channels <= 0) activeChannel = -1;
 
-		if (lightUpdater.process()) updateLights();
-
 		if(activeChannel > -1) {
 			outputs[MONOOUT_OUTPUT].setVoltage(inputs[POLYIN_INPUT].getVoltage(activeChannel));
 		}
@@ -89,33 +92,26 @@ struct SwitchN1 : Module {
 		increaseConnected = inputs[STEPINC_INPUT].isConnected();
 		decreaseConnected = inputs[STEPDEC_INPUT].isConnected();
 		randomConnected = inputs[RANDOM_INPUT].isConnected();
+		resetConnected = inputs[RESET_INPUT].isConnected();
 	}
 
-	void updateLights() {
-		for(int x=0; x<32; x+=2) {
+	json_t* dataToJson() override {
+		json_t* rootJ = json_object();
+		json_object_set_new(rootJ, "step", json_integer(step));
+		return rootJ;
+	}
 
-			for (int c = 0; c < 16; c++) {
-				bool active = (c < channels);
-				bool selected = c == activeChannel;
-				if(selected && active) {
-					lights[CHANNEL_LIGHTS + c * 2].setBrightness(1.f);
-					lights[CHANNEL_LIGHTS + c * 2 + 1].setBrightness(0.f);	
-				}
-				if(active && ! selected) {
-					lights[CHANNEL_LIGHTS + c * 2].setBrightness(0.f);	
-					lights[CHANNEL_LIGHTS + c * 2 + 1].setBrightness(1.f);	
-				}
-				if(! active) {
-					lights[CHANNEL_LIGHTS + c * 2].setBrightness(0.f);
-					lights[CHANNEL_LIGHTS + c * 2 + 1].setBrightness(0.f);
-				}
-			}
+	void dataFromJson(json_t* rootJ) override {
+		json_t* stepJ = json_object_get(rootJ, "step");
+		if(stepJ) {
+			step = json_integer_value(stepJ);
 		}
 	}
 };
 
-
 struct SwitchN1Widget : ModuleWidget {
+	PolyLightPort<16>* input;
+
 	SwitchN1Widget(SwitchN1* module) {
 		setModule(module);
 		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/SwitchN1.svg")));
@@ -125,27 +121,26 @@ struct SwitchN1Widget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.699, 20.179)), module, SwitchN1::POLYIN_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.699, 44.999)), module, SwitchN1::CV_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.699, 59.772)), module, SwitchN1::STEPINC_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.699, 75.146)), module, SwitchN1::STEPDEC_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.699, 90.113)), module, SwitchN1::RANDOM_INPUT));
+		input = createInputCentered<PolyLightPort<16>>(mm2px(Vec(7.699, 22.179)), module, SwitchN1::POLYIN_INPUT);
+		input->selectedColor = SCHEME_ORANGE_23V;
+		addInput(input);
 
-		LightGridFactory<TinyLight<GreenBlueLight>> lightFactory;
-		lightFactory.moduleWidget = this;
-		lightFactory.lights = 16;
-		lightFactory.colors = 2;
-		lightFactory.rows = 2;
-		lightFactory.startX = 0.8;
-		lightFactory.startY = 34;
-		lightFactory.Xseparation = 1.8;
-		lightFactory.Yseparation = 1.8;
-		lightFactory.base = SwitchN1::CHANNEL_LIGHTS;
-		lightFactory.make();
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 38.200)), module, SwitchN1::RESET_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 51.100)), module, SwitchN1::CV_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 65.000)), module, SwitchN1::STEPINC_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 79.146)), module, SwitchN1::STEPDEC_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 92.700)), module, SwitchN1::RANDOM_INPUT));
 
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.699, 107.163)), module, SwitchN1::MONOOUT_OUTPUT));
 	}
-};
 
+	void step() override {
+		if(module) {
+			SwitchN1* module =  dynamic_cast<SwitchN1*>(this->module);
+			input->selectedChannel = module->activeChannel;
+		}
+		ModuleWidget::step();
+	}
+};
 
 Model* modelSwitchN1 = createModel<SwitchN1, SwitchN1Widget>("SwitchN1");

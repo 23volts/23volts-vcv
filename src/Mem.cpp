@@ -1,6 +1,5 @@
 #include "23volts.hpp"
-#include "vector"
-#include "string"
+#include "widgets/ports.hpp"
 
 struct MemoryBank {
 	private:
@@ -338,9 +337,9 @@ struct MemWidget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.7, 16.72)), module, Mem::TRIG_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.7, 62.758)), module, Mem::INPUT_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.7, 77.234)), module, Mem::CLEAR_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.7, 91.862)), module, Mem::RESET_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.7, 62.758)), module, Mem::INPUT_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.7, 77.234)), module, Mem::CLEAR_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.7, 91.862)), module, Mem::RESET_INPUT));
 		addInput(createInputCentered<InvisiblePort>(mm2px(Vec(10.69, 51.23)), module, Mem::WRITE_INPUT));
 
 		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(7.7, 107.503)), module, Mem::OUTPUT_OUTPUT));
