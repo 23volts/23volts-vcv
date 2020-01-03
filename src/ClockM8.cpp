@@ -1,5 +1,10 @@
 #include "23volts.hpp"
 #include "helpers.hpp"
+#include "widgets/buttons.hpp"
+#include "widgets/labels.hpp"
+#include "widgets/knobs.hpp"
+#include "widgets/ports.hpp"
+#include "M8.hpp"
 
 struct ClockFollower {
 
@@ -76,20 +81,16 @@ struct ClockFollower {
 		return m_duration;
 	}
 
-
 	json_t *toJson() {
 		json_t* rootJ = json_object();
-
 		json_object_set_new(rootJ, "is_running", json_boolean(isRunning));
 		json_object_set_new(rootJ, "is_learning", json_boolean(isRunning));
 		json_object_set_new(rootJ, "is_ticking", json_boolean(isRunning));
-
 		json_object_set_new(rootJ, "sample_counter", json_integer(m_sampleCounter));
 		json_object_set_new(rootJ, "last_clock_tick", json_integer(m_lastClockTick));
 		json_object_set_new(rootJ, "duration", json_integer(m_duration));
 		json_object_set_new(rootJ, "next_expected_tick", json_integer(m_nextExpectedClockTick));
 		json_object_set_new(rootJ, "overdue_counter", json_integer(m_overdueCounter));
-
 		return rootJ;
 	}
 
@@ -97,8 +98,6 @@ struct ClockFollower {
 		isRunning = json_is_true(json_object_get(rootJ, "is_running"));
 		isLearning = json_is_true(json_object_get(rootJ, "is_learning"));
 		isTicking = json_is_true(json_object_get(rootJ, "is_ticking"));
-
-		
 		m_sampleCounter = json_integer_value(json_object_get(rootJ, "sample_counter"));
 		m_lastClockTick = json_integer_value(json_object_get(rootJ, "last_clock_tick"));
 		m_duration = json_integer_value(json_object_get(rootJ, "duration"));
@@ -305,7 +304,7 @@ struct ClockModulator {
 	}
 };
 
-struct ClockM8 : Module {
+struct ClockM8 : M8Module {
 
 	static const int POLY_CHANNELS = 16;
 
@@ -345,9 +344,10 @@ struct ClockM8 : Module {
 
 	bool displayNeedsUpdate = true;
 
-	ClockModulator clockModulators[POLY_CHANNELS];
-	ClockFollower clockFollowers[POLY_CHANNELS];
+	ClockModulator clockModulators[M8_POLY_CHANNELS];
+	ClockFollower clockFollowers[M8_POLY_CHANNELS];
 
+	float parameters[POLY_CHANNELS]; // Added for expanders
 	float modulations[POLY_CHANNELS];
 
 	int clockChannels = -1; 
@@ -355,8 +355,8 @@ struct ClockM8 : Module {
 	int resetChannels = -1; 
 	int outputChannels = -1;
 
-	dsp::SchmittTrigger resetTriggers[POLY_CHANNELS];
-	dsp::SchmittTrigger clockTriggers[POLY_CHANNELS];
+	dsp::SchmittTrigger resetTriggers[M8_POLY_CHANNELS];
+	dsp::SchmittTrigger clockTriggers[M8_POLY_CHANNELS];
 
 	bool quantizeBinary = true;
 	bool quantizeTernary = false;
@@ -385,7 +385,11 @@ struct ClockM8 : Module {
 	std::vector<float> currentMultiplicators;
 	std::vector<float> currentDividers;
 
+
 	ClockM8() {
+
+		moduleType = M8_CLOCK_SYSTEM;
+
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(MAIN_KNOB, -10.0, 10.0, 0.0, string::f("Divide/Multiply"));
 		configParam(ATTENUATOR_KNOB, -1.0, 1.0, 0.0, string::f("Mod Attenuverter"));
@@ -398,18 +402,36 @@ struct ClockM8 : Module {
 		channelUpdater.setDivision(32);
 		ratioUpdater.setDivision(512);
 		connectionUpdater.setDivision(128);
-		
+
 		samplerate = APP->engine->getSampleRate();
 		onSampleRateChange();	
 		updateCurrentRatios();
+
+		for(int x = 0; x < M8_POLY_CHANNELS; x++) {
+			channelLitterals[x] = &clockModulators[x].ratioLitteral;
+			channelControls[x] = 0.0f;
+		} 
 	}
 
-
 	void process(const ProcessArgs& args) override {
+		updateExpanders();
 
 		if(connectionUpdater.process()) updateConnections();
 		if(channelUpdater.process()) updateChannels();
 		if(ratioUpdater.process()) updateRatios();
+
+		if(rightLinkActive && statusMessage->moduleType == M8_EXPANDER) {
+			if(controlMessage->bankA == true) {
+				for(int x = 0; x < 8; x++) {
+					//
+				}
+			}
+			if(controlMessage->bankB == true) {
+				for(int x = 8; x < 16; x++) {
+
+				}
+			}
+		}
 
 		// The number of outputs channel will be defined by the number
 		// of channels from the 3 inputs : Clock, Reset, Mod. Whichever
@@ -458,6 +480,14 @@ struct ClockM8 : Module {
 			clockModulators[c].step();
 			outputs[CLOCK_OUTPUT].setVoltage(clockModulators[c].getValue(), c);
 		}
+
+
+		if(rightLinkActive) {
+			for(int c = 0; c < outputChannels; c++) {
+				channelOutputs[c] = clockModulators[c].getValue();
+			}
+			sendStatusMessage();
+		}
 	}
 
 	float getModulatedParameter(int modulationChannel) {
@@ -490,9 +520,13 @@ struct ClockM8 : Module {
 
 	std::string getQuantizedRatioLitteral(float offset) {
 		float ratio = getRawRatio(offset);
-		std::string ratioStr = hasDecimals(ratio) ? std::to_string(ratio) : std::to_string((int)ratio) ;
+		std::string ratioStr = hasDecimals(ratio) ? roundedLitteral(ratio, 2) : std::to_string((int)ratio) ;
 		std::string litteral = ratio == 1 ? "x1" : offset >= 0.f ? "x" + ratioStr : "/" + ratioStr;
 		return litteral;
+	}
+
+	std::string roundedLitteral(float ratio, int precision) {
+		return std::to_string(ratio).substr(0, std::to_string(ratio).find(".") + precision + 1);
 	}
 
 	// Returns raw ratio for the offset
@@ -689,40 +723,6 @@ struct ClockM8 : Module {
 	}
 };
 
-struct TextLabel : TransparentWidget {
-
-	std::shared_ptr<Font> m_font;
-	NVGcolor m_color;
-	std::string m_text;
-	float m_fontSize = 12.f;
-
-	TextLabel(const std::shared_ptr<Font> font) {
-		m_color = nvgRGB(0xFF, 0xFF, 0xFF);
-		m_font = font;
-	}
-
-	void setText(std::string &text) {
-		m_text = text;
-	}
-
-	void draw(const DrawArgs &args) override {
-		nvgFontFaceId(args.vg, m_font->handle);
-		nvgFontSize(args.vg, m_fontSize);
-		//nvgTextLetterSpacing(args.vg, 2.5);
-		Vec textPos = Vec(1.f, 14.5f);
-		nvgFillColor(args.vg, m_color);
-		nvgText(args.vg, textPos.x, textPos.y, m_text.c_str(), NULL);
-	}
-
-	void setFontSize(float size) {
-		m_fontSize = size;
-	}
-
-	void setColor(NVGcolor color) {
-		m_color = color;
-	}
-};
-
 struct ClockModulatorDisplay : TransparentWidget {
 	ClockM8* module;
 	FramebufferWidget* fb;
@@ -738,11 +738,12 @@ struct ClockModulatorDisplay : TransparentWidget {
 		auto fontFileName = "res/fonts/EHSMB.TTF";
 		std::shared_ptr<Font> font = APP->window->loadFont(asset::plugin(pluginInstance, fontFileName));
 		label = new TextLabel(font);
+		label->box.pos = Vec(-1.f, 3.f);
 		label->box.size = size;
 		label->setFontSize(14.f);
 		std::string text = std::string("x1");
 		label->setText(text);
-		label->setColor(nvgRGB(246,139,73));
+		label->setColor(SCHEME_ORANGE_23V);
 		fb->addChild(label);
 		fb->dirty = true;
 	}
@@ -763,7 +764,7 @@ struct ClockModulatorDisplay : TransparentWidget {
 			}
 			else {
 				if(currentRatio != 0.f) {
-					text = " oo ";
+					text = "----";
 					label->setText(text);	
 					fb->dirty = true;
 					currentRatio = 0.f;
@@ -805,17 +806,18 @@ struct ClockM8Widget : ModuleWidget {
 		}
 
 		addInput(createInput<PJ301MPort>(Vec(10.5f, 42), module, ClockM8::CLOCK_INPUT));
-		addInput(createInput<PJ301MPort>(Vec(10.5f, 87), module, ClockM8::RESET_INPUT));
-		addInput(createInput<PJ301MPort>(Vec(2.f, 272), module, ClockM8::MOD_CV_INPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(10.5f, 305), module, ClockM8::CLOCK_OUTPUT));
+		addInput(createInput<SmallPort>(Vec(13.f, 89.5f), module, ClockM8::RESET_INPUT));
+		addInput(createInput<SmallPort>(Vec(5.f, 274.5f), module, ClockM8::MOD_CV_INPUT));
+		
+		addOutput(createOutput<PolyLightPort<16>>(Vec(10.5f, 315), module, ClockM8::CLOCK_OUTPUT));
 
-		addParam(createParam<Rogan1PWhite>(Vec(6.f, 200.f), module, ClockM8::MAIN_KNOB));
-		addParam(createParam<RoundSmallBlackKnob>(Vec(2.f, 243), module, ClockM8::ATTENUATOR_KNOB));
+		addParam(createParam<KnobWhite32>(Vec(6.f, 200.f), module, ClockM8::MAIN_KNOB));
+		addParam(createParam<KnobDark26>(Vec(2.f, 243), module, ClockM8::ATTENUATOR_KNOB));
 
-		addParam(createParam<BlueLedButton>(Vec(25.f,131.0f), module, ClockM8::BINARY_BUTTON));
-		addParam(createParam<BlueLedButton>(Vec(25.f,141.0f), module, ClockM8::TRIPLETS_BUTTON));
-		addParam(createParam<BlueLedButton>(Vec(25.f,151.5f), module, ClockM8::DOTTED_BUTTON));
-		addParam(createParam<BlueLedButton>(Vec(25.f,161.5f), module, ClockM8::ODD_BUTTON));
+		addParam(createParam<LedButton>(Vec(25.f,131.0f), module, ClockM8::BINARY_BUTTON));
+		addParam(createParam<LedButton>(Vec(25.f,141.0f), module, ClockM8::TRIPLETS_BUTTON));
+		addParam(createParam<LedButton>(Vec(25.f,151.5f), module, ClockM8::DOTTED_BUTTON));
+		addParam(createParam<LedButton>(Vec(25.f,161.5f), module, ClockM8::ODD_BUTTON));
 
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));

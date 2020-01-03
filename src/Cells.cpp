@@ -2,7 +2,6 @@
 #include "helpers.hpp"
 #include "widgets/ports.hpp"
 
-
 struct CellularAlgorithm {
 	std::string m_name = "Default";
 	std::vector<int> m_birth;
@@ -489,6 +488,86 @@ struct CellsBackground : TransparentWidget {
 	}
 };
 
+struct MonochromeGridDisplay : OpaqueWidget {
+	int columns;
+	int lines;
+	int gridSize;
+	NVGcolor color;
+	NVGcolor backgroundColor;
+	bool drawBackground = false;
+	bool* cells;
+	float gridWidth;
+	float gridAlpha;
+
+	MonochromeGridDisplay(int gridColumns, int gridLines) {
+		columns = gridColumns;
+		lines = gridLines;
+		gridSize = gridColumns * gridLines;
+		gridWidth = 1.f;
+		gridAlpha = 0.1f;
+		cells = new bool[gridSize];
+		for(int i = 0; i < gridSize;i++) {
+			cells[i] = false;
+		}
+		setColor(0xFF, 0xFF, 0xFF);
+	}
+
+	~MonochromeGridDisplay() {
+		delete cells;
+	}
+
+	void setBackgroundColor(uint8_t red, uint8_t green, uint8_t blue) {
+		backgroundColor = nvgRGB(red, green, blue);
+		drawBackground = true;
+	}
+
+	void setColor(uint8_t red, uint8_t green, uint8_t blue) {
+		color = nvgRGB(red,green,blue);
+	}
+
+	void setCells(const bool* newCells, int size) {
+		for(int x = 0; x < size; x++) {
+			cells[x] = newCells[x];
+		}
+	}
+
+	void draw(const DrawArgs &args) override {
+
+		// Background color
+		if(drawBackground) {
+			nvgFillColor(args.vg, backgroundColor);
+			nvgBeginPath(args.vg);
+			nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+			nvgFill(args.vg);
+		}
+
+		// Grid contour
+		nvgStrokeWidth(args.vg, gridWidth);
+		nvgStrokeColor(args.vg, color::alpha(color, gridAlpha));
+		nvgBeginPath(args.vg);
+		nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+		nvgStroke(args.vg);
+
+		float cellWidth = box.size.x / columns;
+		float cellHeight = box.size.y / lines;
+		
+		// Draw the grid
+		for (int i = 0; i < gridSize; i++) {
+			
+			int posY = i / columns;
+			int posX = i % columns;
+			
+			nvgFillColor(args.vg, color);
+			nvgStrokeWidth(args.vg, gridWidth);
+			nvgStrokeColor(args.vg, color::alpha(color, gridAlpha));
+			nvgBeginPath(args.vg);
+			nvgRect(args.vg, posX * cellWidth, posY * cellHeight, cellWidth, cellHeight);
+			nvgStroke(args.vg);
+			if(cells[i]) nvgFill(args.vg);
+		}
+	}
+};
+
 struct CellsDisplay : OpaqueWidget {
 	Cells* module;
 	FramebufferWidget* fb;
@@ -574,15 +653,15 @@ struct CellsWidget : ModuleWidget {
 		}
 
 		addInput(createInput<PJ301MPort>(Vec(176.1f, 329.f), module, Cells::TICK_INPUT));
-		addInput(createInput<PJ301MPort>(Vec(62.1f, 346.2f), module, Cells::SPAWN_INPUT));
-		addInput(createInput<PJ301MPort>(Vec(133.1f, 317.f), module, Cells::CLEAR_INPUT));
-		addInput(createInput<PJ301MPort>(Vec(62.1f, 317.f), module, Cells::RESET_INPUT));
-		addInput(createInput<PJ301MPort>(Vec(133.1f, 346.2f), module, Cells::ALGO_CV_INPUT));
+		addInput(createInput<SmallPort>(Vec(64.6f, 348.7f), module, Cells::SPAWN_INPUT));
+		addInput(createInput<SmallPort>(Vec(135.6f, 319.5f), module, Cells::CLEAR_INPUT));
+		addInput(createInput<SmallPort>(Vec(64.6f, 319.5f), module, Cells::RESET_INPUT));
+		addInput(createInput<SmallPort>(Vec(135.6f, 348.7f), module, Cells::ALGO_CV_INPUT));
 		
-		addOutput(createOutput<PJ301MPort>(Vec(291.1f, 317.f), module, Cells::DENSITY_CV_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(291.1f, 346.2f), module, Cells::INFINITE_LOOP_GATE_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(219.1f, 317.f), module, Cells::OR_GATE_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(219.1f, 346.2f), module, Cells::NOT_GATE_OUTPUT));
+		addOutput(createOutput<SmallPort>(Vec(293.6f, 319.5f), module, Cells::DENSITY_CV_OUTPUT));
+		addOutput(createOutput<SmallPort>(Vec(293.6f, 348.7f), module, Cells::INFINITE_LOOP_GATE_OUTPUT));
+		addOutput(createOutput<SmallPort>(Vec(221.6f, 319.5f), module, Cells::OR_GATE_OUTPUT));
+		addOutput(createOutput<SmallPort>(Vec(221.6f, 348.6f), module, Cells::NOT_GATE_OUTPUT));
 
 
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));

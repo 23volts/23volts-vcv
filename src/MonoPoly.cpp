@@ -5,7 +5,7 @@
 
 struct MonoPoly : Module {
 
-	static const int CHANNELS = 3;
+	static const int CHANNELS = 2;
 	static const int INITIAL_STEPS = 15;
 
 	enum ParamIds {
@@ -13,6 +13,7 @@ struct MonoPoly : Module {
 		NUM_PARAMS
 	};
 	enum InputIds {
+		ENUMS(CV_INPUTS, CHANNELS),
 		ENUMS(MONO_INPUTS, CHANNELS),
 		NUM_INPUTS
 	};
@@ -28,13 +29,13 @@ struct MonoPoly : Module {
 
 	int steps[CHANNELS];
 
+	bool cvConnected[CHANNELS];
 	bool inputConnected[CHANNELS];
 	bool outputConnected[CHANNELS];
 	
 	MonoPoly() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		for(int x = 0; x < CHANNELS; x++) {
-			// Config step chanNel param
 			configParam(STEP_KNOBS + x, 0.0f, 15.0f, (float) INITIAL_STEPS, "Number of channels");
 			inputConnected[x] = false;
 			outputConnected[x] = false;
@@ -60,26 +61,36 @@ struct MonoPoly : Module {
 
 	void updateSteps() {
 		for(int x = 0; x < CHANNELS; x++) {
-			steps[x] = std::floor(params[STEP_KNOBS + x].getValue());
+			steps[x] = getChannelSteps(x); 
 			outputs[x].setChannels(steps[x] + 1);	
+		}
+	}
+
+	int getChannelSteps(int channel) {
+		if(cvConnected[channel]) {
+			float inputValue = math::clamp(inputs[CV_INPUTS + channel].getVoltage(), 0.f, 10.f);
+			int steps = (int) rescale(inputValue, 0.f, 10.f, 0.f, 15.f);
+			return steps;
+		}
+		else {
+			return std::floor(params[STEP_KNOBS + channel].getValue());
 		}
 	}
 
 	void updateConnections() {
 		for(int x = 0; x < CHANNELS ; x++) {
+			cvConnected[x] = inputs[CV_INPUTS + x].isConnected();
 			inputConnected[x] = inputs[MONO_INPUTS + x].isConnected();
 			outputConnected[x] = outputs[POLY_OUTPUTS + x].isConnected();
 		}
 	}
 	
-	/** Called when user clicks Initialize in the module context menu. */
 	void onReset() override {
 		for(int x = 0; x < CHANNELS; x++) {
 			steps[x] = INITIAL_STEPS;
 		}
 	}
 
-	/** Called when user clicks Randomize in the module context menu. */
 	void onRandomize() override {
 		for(int x = 0; x < CHANNELS; x++) {
 			steps[x] = randomInteger(0, 15);
@@ -108,23 +119,24 @@ struct MonoPoly : Module {
 	}
 };
 
-
 struct MonoPolyWidget : ModuleWidget {
 
 	MonoPolyWidget(MonoPoly* module) {
 		setModule(module);
 		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/MonoPoly.svg")));
 
-		float yOffset = 42.f;
+		float yOffset = 58.f;
 
 		for(int x = 0; x < MonoPoly::CHANNELS; x++) {
-			float y = yOffset + x * 105;
-			addInput(createInput<PJ301MPort>(Vec(10.5, y), module, MonoPoly::MONO_INPUTS + x));
+			float y = yOffset + x * 160;
+			addInput(createInput<SmallPort>(Vec(13, y), module, MonoPoly::MONO_INPUTS + x));
 			
-			PolyLightPort<16>* polyOutput = createOutput<PolyLightPort<16>>(Vec(10.5f, y + 35), module, MonoPoly::POLY_OUTPUTS + x);
+			PolyLightPort<16>* polyOutput = createOutput<PolyLightPort<16>>(Vec(10.5f, y + 24), module, MonoPoly::POLY_OUTPUTS + x);
 			addOutput(polyOutput);
 			
 			addParam(createParamCentered<SnapKnobDark26>(Vec(box.size.x / 2.f, y + 78), module, MonoPoly::STEP_KNOBS + x));
+
+			addInput(createInput<SmallPort>(Vec(13, y + 93), module, MonoPoly::CV_INPUTS + x));
 		}
 
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
@@ -132,8 +144,6 @@ struct MonoPolyWidget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 	}
-
 };
-
 
 Model* modelMonoPoly = createModel<MonoPoly, MonoPolyWidget>("MonoPoly");

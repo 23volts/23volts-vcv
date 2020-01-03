@@ -2,13 +2,16 @@
 
 #include "rack.hpp"
 
-// A light that can dynamically change color, with brightness control
 struct DynamicLight : LightWidget {
-
 	NVGcolor baseColor;
 
 	float brightness = 1.f;
 	bool hasHalo = true;
+
+	DynamicLight() {
+		this->bgColor = nvgRGB(0x5a, 0x5a, 0x5a);
+		this->borderColor = nvgRGBA(0, 0, 0, 0x60);
+	}
 
 	void setColor(NVGcolor newColor) {
 		baseColor = newColor;
@@ -24,7 +27,6 @@ struct DynamicLight : LightWidget {
 		if(hasHalo) LightWidget::drawHalo(args);
 	}
 };
-
 
 struct SquareLight : DynamicLight {
 
@@ -49,5 +51,4 @@ struct SquareLight : DynamicLight {
 			nvgStroke(args.vg);
 		}
 	}
-
 };

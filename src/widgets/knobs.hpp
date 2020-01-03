@@ -26,6 +26,12 @@ struct KnobWhite32 : rack::RoundKnob {
 	}
 };
 
+struct KnobWhite48 : rack::RoundKnob {
+	KnobWhite48() {
+		setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/KnobWhite48.svg")));
+	}
+};
+
 struct SnapKnobWhite26 : KnobWhite26 {
 	SnapKnobWhite26() {
 		snap = true;

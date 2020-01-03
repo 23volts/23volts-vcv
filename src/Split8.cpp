@@ -45,14 +45,14 @@ struct Split8Widget : ModuleWidget {
 		input->offset = 3;
 		addInput(input);
 
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(8.9, 39.045)), module, Split8::OUTPUTS + 0));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(8.9, 49.814)), module, Split8::OUTPUTS + 1));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(8.9, 60.269)), module, Split8::OUTPUTS + 2));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(8.9, 70.607)), module, Split8::OUTPUTS + 3));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(8.9, 80.944)), module, Split8::OUTPUTS + 4));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(8.9, 91.334)), module, Split8::OUTPUTS + 5));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(8.9, 102.051)), module, Split8::OUTPUTS + 6));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(8.9, 112.139)), module, Split8::OUTPUTS + 7));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(8.9, 39.045)), module, Split8::OUTPUTS + 0));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(8.9, 49.814)), module, Split8::OUTPUTS + 1));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(8.9, 60.269)), module, Split8::OUTPUTS + 2));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(8.9, 70.607)), module, Split8::OUTPUTS + 3));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(8.9, 80.944)), module, Split8::OUTPUTS + 4));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(8.9, 91.334)), module, Split8::OUTPUTS + 5));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(8.9, 102.051)), module, Split8::OUTPUTS + 6));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(8.9, 112.139)), module, Split8::OUTPUTS + 7));
 	}
 };
 

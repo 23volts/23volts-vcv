@@ -3,12 +3,19 @@
 #define F_PI float(3.14159265358979323846264338327950288) 
 
 #include "rack.hpp"
+#include "lights.hpp"
 
 struct InvisiblePort : SvgPort {
 	InvisiblePort() {
 		setSvg(APP->window->loadSvg(asset::system("res/ComponentLibrary/PJ3410.svg")));
 		shadow->opacity = 0.01f;
 		sw->visible = false;
+	}
+};
+
+struct SmallPort : SvgPort {
+	SmallPort() {
+		setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/SmallPort.svg")));
 	}
 };
 
@@ -35,7 +42,7 @@ struct LightPort : TBase {
 template <int TChannels>
 struct PolyLightPort : rack::app::SvgPort {
 
-	TinyLight<BlueLight>* lights[TChannels];
+	TinyLight<DynamicLight>* lights[TChannels];
 
 	int offset = 0;
 
@@ -44,6 +51,10 @@ struct PolyLightPort : rack::app::SvgPort {
 
 	// Allows to define dinamically how many channels LEDS are visible
 	int activeChannels = TChannels;  
+
+	NVGcolor selectedColor = SCHEME_GREEN;
+	int selectedChannel = -1;
+	int oldSelectedChannel = -1;
 
 	bool created = false;
 
@@ -74,7 +85,7 @@ struct PolyLightPort : rack::app::SvgPort {
 			float xPos  = sinDiv * 14.1f;
 			float yPos  = cosDiv * 14.1f;
 
-			TinyLight<BlueLight>* light = new TinyLight<BlueLight>;
+			TinyLight<DynamicLight>* light = new TinyLight<DynamicLight>;
 			light->box.pos = Vec(xPos + 10.5f, 10.75f - yPos);
 			lights[i] = light;
 		}
@@ -110,11 +121,10 @@ struct PolyLightPort : rack::app::SvgPort {
 			channels = module ? module->inputs[portId].getChannels() : TChannels;
 		}
 
-		if(channels != oldChannels) {
+		if(channels != oldChannels ||oldSelectedChannel != selectedChannel) {
 			for(int i = 0; i < TChannels; i++) {
-				std::vector<float> brightnesses;
-				brightnesses.push_back(channels > i ? 1.0f : 0.f);
-				lights[i]->setBrightnesses(brightnesses);
+				lights[i]->setColor(i == selectedChannel ? selectedColor : SCHEME_BLUE);
+				lights[i]->setBrightness(channels > i ? 1.f : 0.f);
 			}
 			oldChannels = channels;
 		}

@@ -11,6 +11,7 @@
   "manualUrl": "https://github.com/23volts/23volts-vcv",
   "sourceUrl": "https://github.com/23volts/23volts-vcv",
   "donateUrl": "https://paypal.me/23volts",
+  "changelogUrl": "https://github.com/23volts/23volts-vcv/CHANGELOG.md",
   "modules": [
     {
       "slug": "Mem",
@@ -34,9 +35,47 @@
       ]
     },
     {
+      "slug": "MultimapK",
+      "name": "Multimap",
+      "description": "Versatile Midi IO & mapping utility, 16 knobs version",
+      "tags": [
+        "Midi",
+        "Controller",
+        "Utility"
+      ]
+    },
+    {
+      "slug": "MultimapS",
+      "name": "Multimap",
+      "description": "Versatile Midi IO & mapping utility, 16 switches version",
+      "tags": [
+        "Midi",
+        "Controller",
+        "Utility"
+      ]
+    },
+    {
       "slug": "Split8",
       "name": "Split8",
       "description": "8 voices polyphonic splitter",
+      "tags": [
+        "Polyphonic",
+        "Utility"
+      ]
+    },
+    {
+      "slug": "Split4",
+      "name": "Split4",
+      "description": "2 x 4 voices polyphonic splitter",
+      "tags": [
+        "Polyphonic",
+        "Utility"
+      ]
+    },
+    {
+      "slug": "Merge4",
+      "name": "Merge4",
+      "description": "2 x 4 voices polyphonic merger",
       "tags": [
         "Polyphonic",
         "Utility"
@@ -79,6 +118,14 @@
         "Polyphonic"
       ]
     },
+     {
+      "slug": "MidiPC",
+      "name": "MidiPC",
+      "description": "Sends and receive midi program change",
+      "tags": [
+        "MIDI"
+      ]
+    },
     {
       "slug": "PolyMerge",
       "name": "PolyMerge",
@@ -100,7 +147,7 @@
     {
       "slug": "MonoPoly",
       "name": "MonoPoly",
-      "description": "Copy a mono channel to N polyphonic channels",
+      "description": "Copy a mono channel to 1-n poly channels",
       "tags": [
         "Polyphonic",
         "Util"
