@@ -150,7 +150,7 @@
       "description": "Copy a mono channel to 1-n poly channels",
       "tags": [
         "Polyphonic",
-        "Util"
+        "Utility"
       ]
     }
   ]
