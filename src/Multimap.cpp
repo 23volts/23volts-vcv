@@ -130,6 +130,8 @@ struct Multimap : Module {
 
 		for(int paramId = 0; paramId < NUM_PARAMS; paramId++) {
 			mappingProcessor.params[paramId] = paramQuantities[paramId];
+			midiMap.parameterIds.push_back(paramId);
+			handleMap.parameterIds.push_back(paramId);
 		}
 
 		outputs[POLY_CV_OUTPUT].channels = 0;

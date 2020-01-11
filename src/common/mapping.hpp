@@ -7,6 +7,7 @@
 #include "../widgets/labels.hpp"
 
 struct ParamMapCollection {
+	std::vector<int> parameterIds;
 	bool learningEnabled = false;
 	int learningParamId = -1;
 	int touchedParamId = -1;
@@ -37,6 +38,26 @@ struct ParamMapCollection {
 
 	bool isLearning(int paramId) {
 		return learningParamId == paramId;
+	}
+
+	void learnNext()  {
+		int learnIndex = getParameterIndex(learningParamId);
+
+		if(learnIndex > -1 && learnIndex < (int) parameterIds.size() - 1) {
+			learningParamId = parameterIds[learnIndex + 1];
+		}
+		else {
+			cancelLearning();
+		}
+	}
+
+	int getParameterIndex(int paramId) {
+		for(int x = 0; x < (int) parameterIds.size(); x++) {
+			if(parameterIds[x] == paramId) {
+				return x;
+			}
+		}
+		return -1;
 	}
 
 	virtual void unassign(int paramId) {}
@@ -131,7 +152,7 @@ struct HandleMapCollection : ParamMapCollection {
 		mapping->moduleName = moduleWidget->model->name;
 		mapping->paramName = paramQuantity->label;
 
-		learningParamId = -1;
+		learnNext();
 	}
 
 	virtual ParamMapping* getMap(int paramId) {
@@ -243,7 +264,7 @@ struct MultiHandleMapCollection : HandleMapCollection {
 
 	void commitLearn(int paramId, int targetModuleId, int targetParamId) override {
 		pages[currentPage]->commitLearn(paramId, targetModuleId, targetParamId);
-		learningParamId = -1;
+		learnNext();
 	}
 
 	ParamMapping* getMap(int paramId) override {
@@ -623,6 +644,21 @@ struct MappableParameter : TBase {
 	}
 
 	void step() override {
+		// Test
+		if(handleMap && handleMap->isLearning(paramId)) {
+			ParamWidget *touchedParam = APP->scene->rack->touchedParam;
+			if (touchedParam && touchedParam->paramQuantity->module != module) {
+				APP->scene->rack->touchedParam = NULL;
+				int targetModuleId = touchedParam->paramQuantity->module->id;
+				int targetParamId = touchedParam->paramQuantity->paramId;
+				handleMap->commitLearn(paramId, targetModuleId, targetParamId);
+				paramQuantity->setScaledValue(touchedParam->paramQuantity->getScaledValue());
+			}
+			/*else {
+				handleMap->cancelLearning();
+			}*/
+		}
+		//
 		TBase::step();
 	}
 
@@ -738,7 +774,7 @@ struct MappableParameter : TBase {
 			}
 		}
 
-		if(handleMap) {
+		/*if(handleMap) {
 			if(handleMap->isLearningEnabled() && handleMap->isLearning(paramId)) {
 
 				ParamWidget *touchedParam = APP->scene->rack->touchedParam;
@@ -754,7 +790,7 @@ struct MappableParameter : TBase {
 					handleMap->cancelLearning();
 				}
 			}
-		}
+		}*/
 		TBase::onDeselect(e);
 	}
 

@@ -57,6 +57,7 @@ struct Morph : Module {
 
 		for(int paramId = 0; paramId < NUM_PARAMS; paramId++) {
 			mappingProcessor.params[paramId] = paramQuantities[paramId];
+			handleMap.parameterIds.push_back(paramId);
 		}
 	}
 
