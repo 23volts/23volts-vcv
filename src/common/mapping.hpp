@@ -68,6 +68,7 @@ struct ParamMapping {
 	std::string moduleName;
 	std::string paramName;
 	ParamHandle paramHandle;
+	float lastValue = 0.f;
 
 	json_t* toJson() {
 		json_t* rootJ = json_object();
@@ -545,17 +546,15 @@ struct MappingProcessor {
 		while(iterator != parameters->end())
 		{
 			int paramId = iterator->first;
-			ParamHandle handle = iterator->second.paramHandle;
-			updateHandledParameter(paramId, handle);
+			updateHandledParameter(paramId, &iterator->second);
 			iterator++;
 		}
 	}
 
-	void updateHandledParameter(int paramId, ParamHandle& paramHandle) {
-		float value = params[paramId]->getScaledValue();
+	void updateHandledParameter(int paramId, ParamMapping* mapping) {
+		ParamHandle paramHandle = mapping->paramHandle;
 
 		Module* module = paramHandle.module;
-		
 		if (!module) {
 			return; 
 		}
@@ -566,7 +565,18 @@ struct MappingProcessor {
 		if (!paramQuantity) return;
 		if (!paramQuantity->isBounded()) return;
 
-		paramQuantity->setScaledValue(value);
+		float value = params[paramId]->getScaledValue();
+		float targetParameterValue = paramQuantity->getScaledValue();
+		
+		if(targetParameterValue != mapping->lastValue) {
+			value = targetParameterValue;
+			params[paramId]->setScaledValue(value);
+		}
+		else {
+			paramQuantity->setScaledValue(value);		
+		}
+
+		mapping->lastValue = value;
 	}
 
 

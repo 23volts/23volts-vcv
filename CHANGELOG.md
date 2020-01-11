@@ -2,6 +2,7 @@
 - Multimap : Allow chain assignment. 
 - Multimap : Mapping indicators are now displayed in transparency if they don't belong to the active bank. 
 - Morph : Allow chain assignment.
+- Morph & Multimap : Assigning parameters now doesn't "lock" the parameter on the target module.
 
 ### 1.1.0 (2019-01-03)
 
