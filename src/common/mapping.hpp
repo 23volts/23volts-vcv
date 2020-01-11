@@ -7,6 +7,7 @@
 #include "../widgets/labels.hpp"
 
 struct ParamMapCollection {
+	std::vector<int> parameterIds;
 	bool learningEnabled = false;
 	int learningParamId = -1;
 	int touchedParamId = -1;
@@ -29,6 +30,7 @@ struct ParamMapCollection {
 
 	void startLearning(int paramId) {
 		learningParamId = paramId;
+		setLearning(true);
 	}
 
 	void cancelLearning() {
@@ -39,6 +41,26 @@ struct ParamMapCollection {
 		return learningParamId == paramId;
 	}
 
+	void learnNext()  {
+		int learnIndex = getParameterIndex(learningParamId);
+
+		if(learnIndex > -1 && learnIndex < (int) parameterIds.size() - 1) {
+			learningParamId = parameterIds[learnIndex + 1];
+		}
+		else {
+			cancelLearning();
+		}
+	}
+
+	int getParameterIndex(int paramId) {
+		for(int x = 0; x < (int) parameterIds.size(); x++) {
+			if(parameterIds[x] == paramId) {
+				return x;
+			}
+		}
+		return -1;
+	}
+
 	virtual void unassign(int paramId) {}
 	virtual bool isAssigned(int paramId) { return false; };
 };
@@ -47,6 +69,7 @@ struct ParamMapping {
 	std::string moduleName;
 	std::string paramName;
 	ParamHandle paramHandle;
+	float lastValue = 0.f;
 
 	json_t* toJson() {
 		json_t* rootJ = json_object();
@@ -131,7 +154,7 @@ struct HandleMapCollection : ParamMapCollection {
 		mapping->moduleName = moduleWidget->model->name;
 		mapping->paramName = paramQuantity->label;
 
-		learningParamId = -1;
+		learnNext();
 	}
 
 	virtual ParamMapping* getMap(int paramId) {
@@ -202,15 +225,33 @@ struct MultiHandleMapCollection : HandleMapCollection {
 	}
 
 	void next() {
-		currentPage++;
 		if(currentPage >= size) {
 			pages.push_back(new HandleMapCollection());
 			size++;
 		}
+		loadPage(currentPage + 1);
 	}
 
 	void previous() {
-		if(currentPage > 0) currentPage--;
+		if(currentPage > 0) {
+			loadPage(currentPage - 1);
+		}
+	}
+
+	void loadPage(int page) {
+		setCurrentPageHandleColor(nvgRGBA(0xf9, 0xdf, 0x1c, 0x42));
+		currentPage = page;
+		setCurrentPageHandleColor(SCHEME_YELLOW);
+	}
+
+	void setCurrentPageHandleColor(NVGcolor color) {
+		HandleMapCollection* parameters = pages[currentPage];
+		auto iterator = parameters->param2handle.begin();
+		while(iterator != parameters->param2handle.end())
+		{
+			iterator->second.paramHandle.color = color;
+			iterator++;
+		}
 	}
 
 	void unassign(int paramId) override {
@@ -243,7 +284,7 @@ struct MultiHandleMapCollection : HandleMapCollection {
 
 	void commitLearn(int paramId, int targetModuleId, int targetParamId) override {
 		pages[currentPage]->commitLearn(paramId, targetModuleId, targetParamId);
-		learningParamId = -1;
+		learnNext();
 	}
 
 	ParamMapping* getMap(int paramId) override {
@@ -378,6 +419,9 @@ struct MidiMapCollection : ParamMapCollection {
 						mapping.channel = channel;
 						mapping.cc = number;
 						mapping.type = MidiMapping::MIDI_NOTE;
+						if(isAssigned(learningParamId)) {
+
+						}
 						param2midi.emplace(learningParamId, mapping);
 					}
 					commitLearn();
@@ -388,6 +432,9 @@ struct MidiMapCollection : ParamMapCollection {
 					mapping.channel = channel;
 					mapping.cc = number;
 					mapping.type = MidiMapping::MIDI_CC;
+					if(isAssigned(learningParamId)) {
+						param2midi.erase(learningParamId);		
+					}
 					param2midi.emplace(learningParamId, mapping);
 					commitLearn();
 					break;
@@ -486,7 +533,7 @@ struct MappingProcessor {
 			if (learning == true) {
 				midiMap->onMidiMessage(msg);
 			}
-			
+
 			int paramId = midiMap->getMappedParamId(msg);
 			
 			if(paramId > -1) {
@@ -495,7 +542,6 @@ struct MappingProcessor {
 				midiCache.updateCache(paramId, midiValue);
 				midiMap->touch(paramId);
 			}
-			
 		}
 	}
 
@@ -506,17 +552,15 @@ struct MappingProcessor {
 		while(iterator != parameters->end())
 		{
 			int paramId = iterator->first;
-			ParamHandle handle = iterator->second.paramHandle;
-			updateHandledParameter(paramId, handle);
+			updateHandledParameter(paramId, &iterator->second);
 			iterator++;
 		}
 	}
 
-	void updateHandledParameter(int paramId, ParamHandle& paramHandle) {
-		float value = params[paramId]->getScaledValue();
+	void updateHandledParameter(int paramId, ParamMapping* mapping) {
+		ParamHandle paramHandle = mapping->paramHandle;
 
 		Module* module = paramHandle.module;
-		
 		if (!module) {
 			return; 
 		}
@@ -527,7 +571,18 @@ struct MappingProcessor {
 		if (!paramQuantity) return;
 		if (!paramQuantity->isBounded()) return;
 
-		paramQuantity->setScaledValue(value);
+		float value = params[paramId]->getScaledValue();
+		float targetParameterValue = paramQuantity->getScaledValue();
+		
+		if(targetParameterValue != mapping->lastValue) {
+			value = targetParameterValue;
+			params[paramId]->setScaledValue(value);
+		}
+		else {
+			paramQuantity->setScaledValue(value);		
+		}
+
+		mapping->lastValue = value;
 	}
 
 
@@ -623,6 +678,16 @@ struct MappableParameter : TBase {
 	}
 
 	void step() override {
+		if(handleMap && handleMap->isLearning(paramId)) {
+			ParamWidget *touchedParam = APP->scene->rack->touchedParam;
+			if (touchedParam && touchedParam->paramQuantity->module != module) {
+				APP->scene->rack->touchedParam = NULL;
+				int targetModuleId = touchedParam->paramQuantity->module->id;
+				int targetParamId = touchedParam->paramQuantity->paramId;
+				handleMap->commitLearn(paramId, targetModuleId, targetParamId);
+				paramQuantity->setScaledValue(touchedParam->paramQuantity->getScaledValue());
+			}
+		}
 		TBase::step();
 	}
 
@@ -735,24 +800,6 @@ struct MappableParameter : TBase {
 			if(midiMap->isLearningEnabled() && midiMap->isLearning(paramId)) {
 				midiMap->cancelLearning();
 				e.consume(this);
-			}
-		}
-
-		if(handleMap) {
-			if(handleMap->isLearningEnabled() && handleMap->isLearning(paramId)) {
-
-				ParamWidget *touchedParam = APP->scene->rack->touchedParam;
-
-				if (touchedParam && touchedParam->paramQuantity->module != module) {
-					APP->scene->rack->touchedParam = NULL;
-					int targetModuleId = touchedParam->paramQuantity->module->id;
-					int targetParamId = touchedParam->paramQuantity->paramId;
-					handleMap->commitLearn(paramId, targetModuleId, targetParamId);
-					paramQuantity->setScaledValue(touchedParam->paramQuantity->getScaledValue());
-				} 
-				else {
-					handleMap->cancelLearning();
-				}
 			}
 		}
 		TBase::onDeselect(e);

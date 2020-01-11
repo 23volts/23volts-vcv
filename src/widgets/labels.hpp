@@ -20,6 +20,7 @@ struct TextLabel : rack::widget::TransparentWidget {
 	}
 
 	void draw(const DrawArgs &args) override {
+		nvgScissor(args.vg, RECT_ARGS(args.clipBox));
 		float bounds[4];
 		nvgFontFaceId(args.vg, m_font->handle);
 		nvgFontSize(args.vg, m_fontSize);
@@ -34,6 +35,7 @@ struct TextLabel : rack::widget::TransparentWidget {
 		else {
 			nvgText(args.vg, 0, 0, m_text.c_str(), NULL);
 		}
+		nvgResetScissor(args.vg);
 	}
 
 	void setFontSize(float size) {
