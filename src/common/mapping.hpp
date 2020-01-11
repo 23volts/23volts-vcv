@@ -223,15 +223,33 @@ struct MultiHandleMapCollection : HandleMapCollection {
 	}
 
 	void next() {
-		currentPage++;
 		if(currentPage >= size) {
 			pages.push_back(new HandleMapCollection());
 			size++;
 		}
+		loadPage(currentPage + 1);
 	}
 
 	void previous() {
-		if(currentPage > 0) currentPage--;
+		if(currentPage > 0) {
+			loadPage(currentPage - 1);
+		}
+	}
+
+	void loadPage(int page) {
+		setCurrentPageHandleColor(nvgRGBA(0xf9, 0xdf, 0x1c, 0x42));
+		currentPage = page;
+		setCurrentPageHandleColor(SCHEME_YELLOW);
+	}
+
+	void setCurrentPageHandleColor(NVGcolor color) {
+		HandleMapCollection* parameters = pages[currentPage];
+		auto iterator = parameters->param2handle.begin();
+		while(iterator != parameters->param2handle.end())
+		{
+			iterator->second.paramHandle.color = color;
+			iterator++;
+		}
 	}
 
 	void unassign(int paramId) override {
@@ -644,7 +662,6 @@ struct MappableParameter : TBase {
 	}
 
 	void step() override {
-		// Test
 		if(handleMap && handleMap->isLearning(paramId)) {
 			ParamWidget *touchedParam = APP->scene->rack->touchedParam;
 			if (touchedParam && touchedParam->paramQuantity->module != module) {
@@ -654,11 +671,7 @@ struct MappableParameter : TBase {
 				handleMap->commitLearn(paramId, targetModuleId, targetParamId);
 				paramQuantity->setScaledValue(touchedParam->paramQuantity->getScaledValue());
 			}
-			/*else {
-				handleMap->cancelLearning();
-			}*/
 		}
-		//
 		TBase::step();
 	}
 
@@ -773,24 +786,6 @@ struct MappableParameter : TBase {
 				e.consume(this);
 			}
 		}
-
-		/*if(handleMap) {
-			if(handleMap->isLearningEnabled() && handleMap->isLearning(paramId)) {
-
-				ParamWidget *touchedParam = APP->scene->rack->touchedParam;
-
-				if (touchedParam && touchedParam->paramQuantity->module != module) {
-					APP->scene->rack->touchedParam = NULL;
-					int targetModuleId = touchedParam->paramQuantity->module->id;
-					int targetParamId = touchedParam->paramQuantity->paramId;
-					handleMap->commitLearn(paramId, targetModuleId, targetParamId);
-					paramQuantity->setScaledValue(touchedParam->paramQuantity->getScaledValue());
-				} 
-				else {
-					handleMap->cancelLearning();
-				}
-			}
-		}*/
 		TBase::onDeselect(e);
 	}
 

@@ -1,5 +1,6 @@
 ### 1.1.1 (2019-01-11)
 - Multimap : Allow chain assignment 
+- Multimap : Mapped parameters which are not in the current bank are now displayed in transparency to show they are not active. 
 - Morph : Allow chain assignment
 
 ### 1.1.0 (2019-01-03)
