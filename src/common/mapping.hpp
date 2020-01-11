@@ -30,6 +30,7 @@ struct ParamMapCollection {
 
 	void startLearning(int paramId) {
 		learningParamId = paramId;
+		setLearning(true);
 	}
 
 	void cancelLearning() {
@@ -418,6 +419,9 @@ struct MidiMapCollection : ParamMapCollection {
 						mapping.channel = channel;
 						mapping.cc = number;
 						mapping.type = MidiMapping::MIDI_NOTE;
+						if(isAssigned(learningParamId)) {
+
+						}
 						param2midi.emplace(learningParamId, mapping);
 					}
 					commitLearn();
@@ -428,6 +432,9 @@ struct MidiMapCollection : ParamMapCollection {
 					mapping.channel = channel;
 					mapping.cc = number;
 					mapping.type = MidiMapping::MIDI_CC;
+					if(isAssigned(learningParamId)) {
+						param2midi.erase(learningParamId);		
+					}
 					param2midi.emplace(learningParamId, mapping);
 					commitLearn();
 					break;
@@ -526,7 +533,7 @@ struct MappingProcessor {
 			if (learning == true) {
 				midiMap->onMidiMessage(msg);
 			}
-			
+
 			int paramId = midiMap->getMappedParamId(msg);
 			
 			if(paramId > -1) {
@@ -535,7 +542,6 @@ struct MappingProcessor {
 				midiCache.updateCache(paramId, midiValue);
 				midiMap->touch(paramId);
 			}
-			
 		}
 	}
 

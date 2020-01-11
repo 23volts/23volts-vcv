@@ -1,7 +1,9 @@
 #include "23volts.hpp"
+#include "widgets/buttons.hpp"
 #include "widgets/knobs.hpp"
 #include "widgets/ports.hpp"
 #include "common/mapping.hpp"
+#include "common/midi.hpp"
 
 struct ParameterSnapshot {
 	float values[8] = {};
@@ -10,6 +12,8 @@ struct ParameterSnapshot {
 struct Morph : Module {
 	enum ParamIds {
 		ENUMS(KNOB_PARAMS, 8),
+		X_PARAM,
+		Y_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -25,8 +29,14 @@ struct Morph : Module {
 		NUM_LIGHTS
 	};
 
+	MidiInputOutput midiIO;
+
 	MappingProcessor mappingProcessor;
 	HandleMapCollection handleMap;
+	MidiMapCollection midiMap;
+
+	float lastXparam = 0.f;
+	float lastYparam = 0.f;
 
 	ParameterSnapshot snapshots[4];
 
@@ -48,17 +58,24 @@ struct Morph : Module {
 		for(int x = 0; x < 8; x++) {
 			configParam(KNOB_PARAMS + x, -10.0, 10.0, 0.0, string::f("Knob %d", x));	
 		}
+		configParam(X_PARAM, 0.0, 1.0, 0.0, "X Axis");
+		configParam(Y_PARAM, 0.0, 1.0, 0.0, "Y Axis");
 		XYInputCheckDivider.setDivision(64);
 		init();
 	}
 
 	void init() {
+		mappingProcessor.midiIO = &midiIO;
+		mappingProcessor.midiMap = &midiMap;
 		mappingProcessor.handleMap = &handleMap;
 
-		for(int paramId = 0; paramId < NUM_PARAMS; paramId++) {
+		for(int paramId = KNOB_PARAMS; paramId <= KNOB_PARAMS + 8; paramId++) {
 			mappingProcessor.params[paramId] = paramQuantities[paramId];
 			handleMap.parameterIds.push_back(paramId);
 		}
+
+		mappingProcessor.params[X_PARAM] = paramQuantities[X_PARAM];
+		mappingProcessor.params[Y_PARAM] = paramQuantities[Y_PARAM];
 	}
 
 	void process(const ProcessArgs& args) override {
@@ -72,6 +89,26 @@ struct Morph : Module {
 			updateSnapshot();
 		}
 
+		bool changed = false;
+		if(midiMap.isAssigned(X_PARAM)) {
+			float currentXValue = params[X_PARAM].getValue();
+			if(currentXValue != lastXparam) {
+				selectorX = rescale(currentXValue, 0.f, 1.f, 0.f, maxX);
+				writingSnapshot = getWritingSnapshot();
+				lastXparam = currentXValue;
+				changed = true;
+			}
+		}
+		if(midiMap.isAssigned(Y_PARAM)) {
+			float currentYValue = params[Y_PARAM].getValue();
+			if(currentYValue != lastYparam) {
+				selectorY = rescale(currentYValue, 0.f, 1.f, 0.f, maxY);
+				writingSnapshot = getWritingSnapshot();
+				lastYparam = currentYValue;
+				changed = true;
+			} 
+		}
+
 		if(inputX) {
 			float X_inputValue = math::clamp(inputs[X_CV_INPUT].getVoltage(), -10.f, 10.f);
 			offsetX = (X_inputValue / 10.f) * maxX;
@@ -82,7 +119,7 @@ struct Morph : Module {
 			offsetY = - ((Y_inputValue / 10.f) * maxY);
 		}
 
-		if(inputX || inputY) updateParameters();
+		if(changed || inputX || inputY) updateParameters();
 
 		for (int x = 0; x < 8; x++) {
 			outputs[OUTPUTS + x].setVoltage(params[KNOB_PARAMS + x].getValue());
@@ -106,6 +143,11 @@ struct Morph : Module {
 		if(selectorY > maxY) selectorY = maxY;
 		writingSnapshot = getWritingSnapshot();
 		updateParameters();
+
+		params[X_PARAM].setValue(rescale(selectorX, 0.f, maxX, 0.f, 1.f));
+		params[Y_PARAM].setValue(rescale(selectorY, 0.f, maxY, 0.f, 1.f));
+		lastXparam = params[X_PARAM].getValue();
+		lastYparam = params[Y_PARAM].getValue();
 	}
 
 	int getWritingSnapshot() {
@@ -188,6 +230,8 @@ struct Morph : Module {
 		}
 		json_object_set_new(rootJ, "snapshots", snapshotsJ);
 		json_object_set_new(rootJ, "handle_map", handleMap.toJson());
+		json_object_set_new(rootJ, "midi_map", midiMap.toJson());
+		json_object_set_new(rootJ, "midi_io", midiIO.toJson());
 		json_object_set_new(rootJ, "writing_snapshot", json_integer(writingSnapshot));
 		return rootJ;
 	}
@@ -213,6 +257,16 @@ struct Morph : Module {
 			handleMap.fromJson(handleMapJ);
 		}
 
+		json_t* midiIOJ = json_object_get(rootJ, "midi_io");
+		if(midiIOJ) {
+			midiIO.fromJson(midiIOJ);
+		}		
+
+		json_t* midiMapJ = json_object_get(rootJ, "midi_map");
+		if(midiMapJ) {
+			midiMap.fromJson(midiMapJ);
+		}
+
 		json_t* writingSnapshotJ = json_object_get(rootJ, "writing_snapshot");
 		if(writingSnapshotJ) {
 			writingSnapshot = json_integer_value(writingSnapshotJ);
@@ -220,8 +274,65 @@ struct Morph : Module {
 	}
 };
 
-struct MorphDisplay : OpaqueWidget
-{
+struct MidiLearnButton : DynamicLedButton {
+	int paramId;
+	MidiMapCollection* midiMap;
+
+	MidiLearnButton() {
+		this->box.size = Vec(10,10);
+		light->box.size = Vec(10,10);
+		light->setColor(SCHEME_BLUE);
+		light->borderColor = nvgRGBA(0xff, 0xff, 0xff, 0x00);
+		light->setBrightness(0.f);
+	}
+
+	void onButton(const event::Button& e) override{
+		if(midiMap) {
+			if (e.action == GLFW_PRESS) {
+				if(midiMap->isLearning(paramId)) {
+					midiMap->cancelLearning();
+				}
+				else {
+					midiMap->startLearning(paramId);
+				}
+			}
+		}
+		e.consume(this);
+		//e.stopPropagating();
+	}
+
+	void step() override {
+		if(midiMap && midiMap->isLearning(paramId)) {
+			light->setColor(SCHEME_BLUE);
+			light->setBrightness(1.f);
+		}
+		else {
+			if(midiMap && midiMap->isAssigned(paramId)) {
+				light->setColor(SCHEME_GREEN);
+				light->setBrightness(1.f);
+			}
+			else {
+				light->setColor(SCHEME_BLUE);
+				light->setBrightness(0.f);
+			}
+		}
+		DynamicLedButton::step();
+	}
+};
+
+struct XLearnButton : MidiLearnButton {
+	XLearnButton() {
+		paramId = Morph::X_PARAM;
+	}
+};
+
+struct YLearnButton : MidiLearnButton {
+	YLearnButton() {
+		paramId = Morph::Y_PARAM;
+	}
+};
+
+struct MorphDisplay : OpaqueWidget {
 	Morph* module;
 	std::shared_ptr<Font> font;
 
@@ -332,10 +443,24 @@ struct MorphWidget : ModuleWidget {
 		}
 
 		addInput(createInputCentered<SmallPort>(mm2px(Vec(10.f, 67.5f)), module, Morph::X_CV_INPUT));
-		addInput(createInputCentered<SmallPort>(mm2px(Vec(19.5f, 67.5f)), module, Morph::Y_CV_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(34.8f, 67.5f)), module, Morph::Y_CV_INPUT));
+
+		{
+			XLearnButton* button = new XLearnButton();
+			button->box.pos = mm2px(Vec(13.5f, 65.9f));
+			if(module) button->midiMap = &module->midiMap;
+			addChild(button);
+		}
+
+		{
+			YLearnButton* button = new YLearnButton();
+			button->box.pos = mm2px(Vec(27.6f, 65.9f));
+			if(module) button->midiMap = &module->midiMap;
+			addChild(button);
+		}
 
 		ParamMapButton* button = new ParamMapButton();
-		button->box.pos = mm2px(Vec(57.5f,65.2f));
+		button->box.pos = mm2px(Vec(60.5f,65.2f));
 		button->light->bgColor = nvgRGBA(0xff, 0xff, 0xff, 0x99);
 		button->light->setColor(SCHEME_YELLOW);
 		button->light->borderColor = nvgRGBA(0xff, 0xff, 0xff, 0x00);
@@ -372,6 +497,18 @@ struct MorphWidget : ModuleWidget {
 			param->handleMap = &module->handleMap;
 		}
 		addParam(param);
+	}
+
+	void appendContextMenu(Menu* menu) override {
+		Morph* module = dynamic_cast<Morph*>(this->module);
+
+		menu->addChild(new MenuSeparator);
+
+		if(module) {
+			MidiMenuBuilder menuBuilder;
+			menuBuilder.channel = false;
+			menuBuilder.build(menu, &module->midiIO);
+		}
 	}
 };
 

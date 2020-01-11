@@ -3,6 +3,7 @@
 - Multimap : Mapping indicators are now displayed in transparency if they don't belong to the active bank. 
 - Morph : Allow chain assignment.
 - Morph & Multimap : Assigning parameters now doesn't "lock" the parameter on the target module.
+- Morph : Add MIDI Learn for X & Y axis
 
 ### 1.1.0 (2019-01-03)
 
