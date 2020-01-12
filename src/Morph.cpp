@@ -524,6 +524,12 @@ struct MorphWidget : ModuleWidget {
 			menuBuilder.build(menu, &module->midiIO);
 		}
 
+		menu->addChild(new MenuSeparator);
+		{
+			MenuLabel* item = new MenuLabel;
+	 		item->text = "Options";
+	 		menu->addChild(item);
+		}
 		{
 			InvertYAxisItem *item = createMenuItem<InvertYAxisItem>("Invert Y-AXIS on MIDI control", CHECKMARK(module->invertYMidiAxis));	
 			item->module = module;
