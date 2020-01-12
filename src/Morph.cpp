@@ -302,6 +302,7 @@ struct MidiLearnButton : DynamicLedButton {
 	}
 
 	void step() override {
+		if(! module) return;
 		if(midiMap && midiMap->isLearning(paramId)) {
 			light->setColor(SCHEME_BLUE);
 			light->setBrightness(1.f);
