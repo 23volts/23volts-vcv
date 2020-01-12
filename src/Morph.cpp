@@ -276,7 +276,7 @@ struct Morph : Module {
 
 struct MidiLearnButton : DynamicLedButton {
 	int paramId;
-	MidiMapCollection* midiMap;
+	MidiMapCollection* midiMap = NULL;
 
 	MidiLearnButton() {
 		this->box.size = Vec(10,10);
@@ -302,7 +302,6 @@ struct MidiLearnButton : DynamicLedButton {
 	}
 
 	void step() override {
-		if(! module) return;
 		if(midiMap && midiMap->isLearning(paramId)) {
 			light->setColor(SCHEME_BLUE);
 			light->setBrightness(1.f);
