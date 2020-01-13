@@ -50,7 +50,7 @@ jobs:
       export RACK_DIR=$AGENT_TEMPDIRECTORY/Rack-SDK
       export CC=gcc
 
-      make dist
+      make win-dist
 
       mkdir products_win/
       cp dist/*zip products_win/
