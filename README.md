@@ -97,7 +97,7 @@ Multimap is a MIDI mapping tool with feedback which can use the same MIDI-CC or 
 
 It comes in 2 versions; one version has 16 knobs and one version has 16 switches.
 
-## Mono Poly
+## MonoPoly
 
 Mono poly takes a mono input and copy the signal to N polyphonic channels. The number of channels can be set by CV.
 
