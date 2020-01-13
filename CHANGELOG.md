@@ -1,3 +1,11 @@
+### 1.1.3
+- Morph : Add option to reverse Y AXIS for MIDI control
+- Multimap : Fix bank switching's color update when using CV & FIRST inputs
+- Multimap : Set ParamHandle transparency on preset load
+
+### 1.1.2 (2019-01-12)
+- Morph : fixed crash happening in module's browser
+
 ### 1.1.1 (2019-01-11)
 - Multimap : Allow chain assignment. 
 - Multimap : Mapping indicators are now displayed in transparency if they don't belong to the active bank. 

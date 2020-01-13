@@ -149,6 +149,7 @@ struct Multimap : Module {
 			if(index != currentBankIndex) {
 				storeCurrentSnapshot();
 				currentBankIndex = index;
+				handleMap.loadPage(currentBankIndex);
 				restoreSnapshot(index);
 			}
 		}
@@ -202,6 +203,7 @@ struct Multimap : Module {
 	void onBankReset() {
 		storeCurrentSnapshot();
 		currentBankIndex = 0;
+		handleMap.loadPage(currentBankIndex);
 		restoreSnapshot(currentBankIndex);
 	}
 
@@ -296,7 +298,10 @@ struct Multimap : Module {
 		if(midiMapJ) midiMap.fromJson(midiMapJ);
 
 		json_t* handleMapJ = json_object_get(rootJ, "handle_map");
-		if(handleMapJ) handleMap.fromJson(handleMapJ);
+		if(handleMapJ) {
+			handleMap.fromJson(handleMapJ);
+			handleMap.loadPage(currentBankIndex);
+		}
 	}
 };
 
