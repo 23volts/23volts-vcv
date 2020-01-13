@@ -321,8 +321,10 @@ struct MultiHandleMapCollection : HandleMapCollection {
 				pages.push_back(new HandleMapCollection());
 				size++;
 				pages[x]->fromJson(json_array_get(pagesJ, x));
+				loadPage(x);
 			}
 		}
+		loadPage(currentPage);
 	}
 };
 

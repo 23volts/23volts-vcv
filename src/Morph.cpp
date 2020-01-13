@@ -35,6 +35,8 @@ struct Morph : Module {
 	HandleMapCollection handleMap;
 	MidiMapCollection midiMap;
 
+	bool invertYMidiAxis = false;
+
 	float lastXparam = 0.f;
 	float lastYparam = 0.f;
 
@@ -102,7 +104,12 @@ struct Morph : Module {
 		if(midiMap.isAssigned(Y_PARAM)) {
 			float currentYValue = params[Y_PARAM].getValue();
 			if(currentYValue != lastYparam) {
-				selectorY = rescale(currentYValue, 0.f, 1.f, 0.f, maxY);
+				if(invertYMidiAxis == true) {
+					selectorY = rescale(currentYValue, 0.f, 1.f, maxY, 0.f);
+				}
+				else {
+					selectorY = rescale(currentYValue, 0.f, 1.f, 0.f, maxY);
+				}
 				writingSnapshot = getWritingSnapshot();
 				lastYparam = currentYValue;
 				changed = true;
@@ -418,6 +425,13 @@ struct MorphDisplay : OpaqueWidget {
 	}
 };
 
+struct InvertYAxisItem : MenuItem {
+	Morph* module;
+	void onAction(const event::Action &e) override {
+		module->invertYMidiAxis = !module->invertYMidiAxis;
+	}
+};	
+
 struct MorphWidget : ModuleWidget {
 	MorphWidget(Morph* module) {
 		setModule(module);
@@ -508,6 +522,18 @@ struct MorphWidget : ModuleWidget {
 			MidiMenuBuilder menuBuilder;
 			menuBuilder.channel = false;
 			menuBuilder.build(menu, &module->midiIO);
+		}
+
+		menu->addChild(new MenuSeparator);
+		{
+			MenuLabel* item = new MenuLabel;
+	 		item->text = "Options";
+	 		menu->addChild(item);
+		}
+		{
+			InvertYAxisItem *item = createMenuItem<InvertYAxisItem>("Invert Y-AXIS on MIDI control", CHECKMARK(module->invertYMidiAxis));	
+			item->module = module;
+			menu->addChild(item);
 		}
 	}
 };
