@@ -131,7 +131,7 @@ jobs:
   - task: GitHubRelease@0
     displayName: "Update Github Release"
     inputs:
-      gitHubConnection: 23volts-token
+      gitHubConnection: release
       repositoryName: 23volts/23volts-vcv
       action: edit
       tag: Nightly
