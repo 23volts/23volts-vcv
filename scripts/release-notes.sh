@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cat <<- EOH
-# Automatically generated BaconMusic release
+# Automatically generated 23volts release
 
 This release is automatically generated every time I push 23volts
 to master. As such it is the latest version of the code and may be
