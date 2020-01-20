@@ -1,7 +1,7 @@
 {
   "slug": "23volts",
   "name": "23volts",
-  "version": "1.1.3b2",
+  "version": "1.2.0b1",
   "license": "GPL-3.0-only",
   "brand": "23volts",
   "author": "R\u00e9mi Collin",
@@ -97,6 +97,17 @@
         "Utility",
         "Polyphonic",
         "Switch"
+      ]
+    },
+    {
+      "slug": "SwitchN2",
+      "name": "SwitchN2",
+      "description": "Dual Polyphonic N to 1 sequential switch",
+      "tags": [
+        "Utility",
+        "Polyphonic",
+        "Switch",
+        "Dual"
       ]
     },
     {

@@ -22,6 +22,7 @@ void init(Plugin *p) {
 	p->addModel(modelSplit4);
 	p->addModel(modelSplit8);
 	p->addModel(modelSwitchN1);
+	p->addModel(modelSwitchN2);
 	// Any other plugin initialization may go here.
 	// As an alternative, consider lazy-loading assets and lookup tables when your module is created to reduce startup times of Rack.
 }

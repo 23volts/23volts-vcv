@@ -1,7 +1,11 @@
-### 1.1.3
+### 1.2.0
+- Introducing **SwitchN2**, a dual polyphonic sequential switch with probability.
+
+### 1.1.3 (2019-01-20)
 - Morph : Add option to reverse Y AXIS for MIDI control
 - Multimap : Fix bank switching's color update when using CV & FIRST inputs
 - Multimap : Set ParamHandle transparency on preset load
+- SwitchN1 : Using STEP INC input was causing selector to skip 1st step, now fixed.
 
 ### 1.1.2 (2019-01-12)
 - Morph : fixed crash happening in module's browser

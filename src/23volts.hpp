@@ -21,5 +21,6 @@ extern Model* modelPolySplit;
 extern Model* modelSplit4;
 extern Model* modelSplit8;
 extern Model* modelSwitchN1;
+extern Model* modelSwitchN2;
 
 static const NVGcolor SCHEME_ORANGE_23V = nvgRGB(246,139,73);

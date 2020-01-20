@@ -62,7 +62,7 @@ struct SwitchN1 : Module {
 
 		if (decreaseConnected && stepDecreaseTrigger.process(inputs[STEPDEC_INPUT].getVoltage())) {
 			step--;
-			if(step <= 0) step = channels - 1;
+			if(step < 0) step = channels - 1;
 		}
 
 		if (randomConnected && stepRandomTrigger.process(inputs[RANDOM_INPUT].getVoltage())) {
