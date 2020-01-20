@@ -4,10 +4,10 @@
 # https://aka.ms/yaml
 
 trigger:
-- master
+- dev
 
 pr:
-- master
+- dev
 
 jobs:
 - job: Build
@@ -131,7 +131,7 @@ jobs:
   - task: GitHubRelease@0
     displayName: "Update Github Release"
     inputs:
-      gitHubConnection: 23volts
+      gitHubConnection: release
       repositoryName: 23volts/23volts-vcv
       action: edit
       tag: Nightly
