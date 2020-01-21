@@ -16,6 +16,7 @@ extern Model* modelMonoPoly;
 extern Model* modelMorph;
 extern Model* modelMultimapK;
 extern Model* modelMultimapS;
+extern Model* modelPatchbay;
 extern Model* modelPolyMerge;
 extern Model* modelPolySplit;
 extern Model* modelSplit4;

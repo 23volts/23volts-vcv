@@ -163,6 +163,15 @@
         "Polyphonic",
         "Utility"
       ]
+    },
+    {
+      "slug": "Patchbay",
+      "name": "Patchbay",
+      "description": "8 I/O patchbay with editable labels",
+      "tags": [
+        "Utility"
+      ]
     }
+
   ]
 }

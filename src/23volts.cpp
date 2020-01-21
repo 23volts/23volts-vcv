@@ -17,6 +17,7 @@ void init(Plugin *p) {
 	p->addModel(modelMorph);
 	p->addModel(modelMultimapK);
 	p->addModel(modelMultimapS);
+	p->addModel(modelPatchbay);
 	p->addModel(modelPolySplit);
 	p->addModel(modelPolyMerge);
 	p->addModel(modelSplit4);

@@ -139,3 +139,63 @@ struct LCDLabel : rack::widget::TransparentWidget {
 		label->box.pos = pos;
 	}
 };
+
+struct LCDTextField : LedDisplayTextField {
+	float fontSize;
+	std::string* linkedText = NULL;
+
+	LCDTextField() {
+		multiline = false;
+		textOffset = Vec(3,3);
+		fontSize = 18.f;
+		color = SCHEME_BLUE;
+		auto fontFileName = "res/fonts/Bebas-Regular.TTF";
+		font = APP->window->loadFont(asset::plugin(pluginInstance, fontFileName));
+	}
+
+	void step() override {
+		if(linkedText != NULL && *linkedText != text) {
+			text = *linkedText;
+		}
+
+		LedDisplayTextField::step();
+	}
+
+	void onChange(const event::Change& e) override {
+		if(linkedText != NULL) {
+			*linkedText = text;
+		}
+		LedDisplayTextField::onChange(e);
+	}
+
+	void draw(const DrawArgs& args) override {
+		nvgScissor(args.vg, RECT_ARGS(args.clipBox));
+
+		// Background
+		nvgBeginPath(args.vg);
+		nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, 5.0);
+		nvgStrokeColor(args.vg, nvgRGB(0x21, 0x21, 0x21));
+		nvgStrokeWidth(args.vg, 1.f);
+		nvgFillColor(args.vg, nvgRGB(0x00, 0x00, 0x00));
+		nvgFill(args.vg);
+		nvgStroke(args.vg);
+
+		// Text
+		if (font->handle >= 0) {
+			bndSetFont(font->handle);
+
+			NVGcolor highlightColor = color;
+			highlightColor.a = 0.5;
+			int begin = std::min(cursor, selection);
+			int end = (this == APP->event->selectedWidget) ? std::max(cursor, selection) : -1;
+			bndIconLabelCaret(args.vg, textOffset.x, textOffset.y,
+			                  box.size.x - 1 * textOffset.x, box.size.y - 1 * textOffset.y,
+			                  -1, color, fontSize, text.c_str(), highlightColor, begin, end);
+
+			bndSetFont(APP->window->uiFont->handle);
+		}
+
+		nvgResetScissor(args.vg);
+	}
+
+};

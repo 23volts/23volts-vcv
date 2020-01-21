@@ -23,7 +23,8 @@ struct SwitchN2 : Module {
 		MONOOUT_B_OUTPUT,
 		MIN_OUTPUT,
 		MAX_OUTPUT,
-		TRIG_OUTPUT,
+		TRIG_A_OUTPUT,
+		TRIG_B_OUTPUT,
 		DICE_OUTPUT,
 		NUM_OUTPUTS
 	};
@@ -41,16 +42,16 @@ struct SwitchN2 : Module {
 	dsp::SchmittTrigger stepRandomTrigger;
 	dsp::SchmittTrigger resetTrigger;
 
-	int channels = 0;
-	int voiceChannels[2] = {0};
+	dsp::PulseGenerator cvTrigger[2];
+
+	int channels[2] = {0};
 
 	int selectedVoice = 0;
 
 	int activeChannels[2] = {-1};
 
-	int step = 0;
-	int stepOffset = 0;
-	float offset = 0.f; // Offset by CV Input
+	int step[2] = {0};
+	int stepOffset[2] = {0};
 
 	bool inputConnected[2] = {false};
 	bool cvConnected = false;
@@ -69,47 +70,65 @@ struct SwitchN2 : Module {
 
 	void process(const ProcessArgs& args) override {
 
-		voiceChannels[0] = inputs[POLYIN_A_INPUT].getChannels();
-		voiceChannels[1] = inputs[POLYIN_B_INPUT].getChannels();
-		channels = fmax(voiceChannels[0], voiceChannels[1]);
-
 		if(connectionUpdater.process()) updateConnections();
 
-		int initialStep = step + stepOffset;
+		int initialStep[2];
+
+		for(int c = 0; c < 2; c++) {
+			channels[c] = inputs[POLYIN_A_INPUT + c].getChannels();
+			initialStep[c] = step[c] + stepOffset[c];
+		}
+		
 		bool trigged = false;
 
 		if(resetConnected && resetTrigger.process(inputs[RESET_INPUT].getVoltage())) {
-			step = 0;
+			step[0] = 0;
+			step[1] = 0;
 			trigged = true;
 		}
 
 		if (increaseConnected && stepIncreaseTrigger.process(inputs[STEPINC_INPUT].getVoltage())) {
-			step++;
-			if(step >= channels) step = 0;
+			step[0]++;
+			step[1]++;
+			if(step[0] >= channels[0]) step[0] = 0;
+			if(step[1] >= channels[1]) step[1] = 0;
 			trigged = true;
 		}
 
 		if (decreaseConnected && stepDecreaseTrigger.process(inputs[STEPDEC_INPUT].getVoltage())) {
-			step--;
-			if(step < 0) step = channels - 1;
+			step[0]--;
+			step[1]--;
+			if(step[0] < 0) step[0] = channels[0] - 1;
+			if(step[1] < 0) step[1] = channels[1] - 1;
 			trigged = true;
 		}
 
 		if (randomConnected && stepRandomTrigger.process(inputs[RANDOM_INPUT].getVoltage())) {
-			step = std::floor(random::uniform() * channels);
+			step[0] = std::floor(random::uniform() * channels[0]);
+			step[1] = std::floor(random::uniform() * channels[1]);
 			trigged = true;
 		}
 
-		if (cvConnected && channels > 1) {
+		if (cvConnected) {
 			float cv = inputs[CV_INPUT].getVoltage();
-			stepOffset = std::floor(cv * (channels / 10.f));
+			for(int c = 0; c < 2; c++) {
+				stepOffset[c] = std::floor(cv * (channels[c] / 10.f));
+				
+				if(step[c] + stepOffset[c] != initialStep[c]) {
+					cvTrigger[c].trigger(32);
+					trigged = true;
+				}
+			}
 		}
 		else {
-			stepOffset = 0.f;
+			stepOffset[0] = 0;
+			stepOffset[1] = 0;
 		}
 
-		if(step + stepOffset != initialStep) {
-			updateActiveChannels();
+		for(int c = 0; c < 2; c++) {
+			if(step[c] + stepOffset[c] != initialStep[c]) {
+				updateActiveChannels(c);
+			}
 		}
 
 		if(trigged) {
@@ -143,28 +162,22 @@ struct SwitchN2 : Module {
 			}
 		}
 
-		outputs[TRIG_OUTPUT].setVoltage(maxVoltage);
+		outputs[TRIG_A_OUTPUT].setVoltage(fmax(maxVoltage, cvTrigger[0].process(1.f) ? 10.f : 0.f));
+		outputs[TRIG_B_OUTPUT].setVoltage(fmax(maxVoltage, cvTrigger[1].process(1.f) ? 10.f : 0.f));
 
 		if(lightUpdater.process()) updateLights();
 	}
 
-	void updateActiveChannels() {
-		int activeChannel = step + stepOffset;
-		if(activeChannel < 0) activeChannel = channels + stepOffset;
-		if(activeChannel >= channels) activeChannel = stepOffset - (channels - step);
-
-		for(int x = 0; x < 2; x++) {
-			if(voiceChannels[x] <= 0) {
-				activeChannels[x] = -1;
-			}
-			else {
-				if(activeChannel >= voiceChannels[x]) {
-					activeChannels[x] = activeChannel % voiceChannels[x];
-				}
-				else {
-					activeChannels[x] = activeChannel;
-				}
-			}
+	void updateActiveChannels(int c) {
+		int activeChannel = step[c] + stepOffset[c];
+		if(activeChannel < 0) activeChannel = channels[c] + stepOffset[c];
+		if(activeChannel >= channels[c]) activeChannel = stepOffset[c] - (channels[c] - step[c]);
+		
+		if(channels[c] <= 0) {
+			activeChannels[c] = -1;
+		}
+		else {
+			activeChannels[c] = activeChannel;
 		}
 	}
 
@@ -199,14 +212,23 @@ struct SwitchN2 : Module {
 
 	json_t* dataToJson() override {
 		json_t* rootJ = json_object();
-		json_object_set_new(rootJ, "step", json_integer(step));
+		json_object_set_new(rootJ, "step_0", json_integer(step[0]));
+		json_object_set_new(rootJ, "step_1", json_integer(step[1]));
 		return rootJ;
 	}
 
 	void dataFromJson(json_t* rootJ) override {
-		json_t* stepJ = json_object_get(rootJ, "step");
-		if(stepJ) {
-			step = json_integer_value(stepJ);
+		{
+			json_t* stepJ = json_object_get(rootJ, "step_0");
+			if(stepJ) {
+				step[0] = json_integer_value(stepJ);
+			}
+		}
+		{
+			json_t* stepJ = json_object_get(rootJ, "step_1");
+			if(stepJ) {
+				step[1] = json_integer_value(stepJ);
+			}
 		}
 	}
 };
@@ -225,11 +247,11 @@ struct SwitchN2Widget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(0, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 1 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		
-		inputA = createInputCentered<PolyLightPort<16>>(mm2px(Vec(7.699, 20.179)), module, SwitchN2::POLYIN_A_INPUT);
+		inputA = createInputCentered<PolyLightPort<16>>(mm2px(Vec(7.699, 18.379)), module, SwitchN2::POLYIN_A_INPUT);
 		inputA->selectedColor = SCHEME_ORANGE_23V;
 		addInput(inputA);
 
-		inputB = createInputCentered<PolyLightPort<16>>(mm2px(Vec(22.699, 20.179)), module, SwitchN2::POLYIN_B_INPUT);
+		inputB = createInputCentered<PolyLightPort<16>>(mm2px(Vec(22.699, 18.379)), module, SwitchN2::POLYIN_B_INPUT);
 		inputB->selectedColor = SCHEME_ORANGE_23V;
 		addInput(inputB);
 
@@ -239,12 +261,13 @@ struct SwitchN2Widget : ModuleWidget {
 		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 79.146)), module, SwitchN2::STEPDEC_INPUT));
 		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 92.700)), module, SwitchN2::RANDOM_INPUT));
 
-		addParam(createParamCentered<KnobDark26>(mm2px(Vec(23, 41.200)), module, SwitchN2::PROBABILITY_KNOB));
-		addInput(createInputCentered<SmallPort>(mm2px(Vec(23, 51.100)), module, SwitchN2::PROBABILITY_INPUT));
+		addParam(createParamCentered<KnobDark26>(mm2px(Vec(15.25, 28.3)), module, SwitchN2::PROBABILITY_KNOB));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(23, 38.200)), module, SwitchN2::PROBABILITY_INPUT));
 
-		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(24, 65)), module, SwitchN2::MIN_OUTPUT));
-		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(24, 79.146)), module, SwitchN2::MAX_OUTPUT));
-		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(24, 92.700)), module, SwitchN2::TRIG_OUTPUT));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(24, 51.100)), module, SwitchN2::MIN_OUTPUT));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(24, 65.0)), module, SwitchN2::MAX_OUTPUT));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(24, 79.146)), module, SwitchN2::TRIG_A_OUTPUT));
+		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(24, 92.700)), module, SwitchN2::TRIG_B_OUTPUT));
 
 		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(6, 112.0)), module, SwitchN2::MONOOUT_A_OUTPUT));
 		addOutput(createOutputCentered<SmallPort>(mm2px(Vec(15.2, 112.0)), module, SwitchN2::DICE_OUTPUT));
