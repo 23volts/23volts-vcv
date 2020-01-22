@@ -127,8 +127,8 @@ struct SwitchN2 : Module {
 					}
 					else {
 						phaseTrigger[c].trigger(32);
-						trigged = true;
 					}
+					trigged = true;
 				}
 			}
 		}
