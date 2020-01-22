@@ -1,4 +1,5 @@
 #include "23volts.hpp"
+#include "common/clock.hpp"
 #include "widgets/knobs.hpp"
 #include "widgets/ports.hpp"
 
@@ -10,7 +11,7 @@ struct SwitchN2 : Module {
 	enum InputIds {
 		POLYIN_A_INPUT,
 		POLYIN_B_INPUT,
-		CV_INPUT,
+		PHASE_INPUT,
 		STEPINC_INPUT,
 		STEPDEC_INPUT,
 		RANDOM_INPUT,
@@ -42,7 +43,9 @@ struct SwitchN2 : Module {
 	dsp::SchmittTrigger stepRandomTrigger;
 	dsp::SchmittTrigger resetTrigger;
 
-	dsp::PulseGenerator cvTrigger[2];
+	dsp::PulseGenerator phaseTrigger[2];
+
+	PhaseClockFollower phaseFollower;
 
 	int channels[2] = {0};
 
@@ -54,7 +57,7 @@ struct SwitchN2 : Module {
 	int stepOffset[2] = {0};
 
 	bool inputConnected[2] = {false};
-	bool cvConnected = false;
+	bool phaseConnected = false;
 	bool increaseConnected = false;
 	bool decreaseConnected = false;
 	bool randomConnected = false;
@@ -66,11 +69,14 @@ struct SwitchN2 : Module {
 		lightUpdater.setDivision(512);
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(PROBABILITY_KNOB, 0.0, 1.0, 0.5, string::f("A/B Probability"));
+		phaseFollower.input = &inputs[PHASE_INPUT];
 	}
 
 	void process(const ProcessArgs& args) override {
 
 		if(connectionUpdater.process()) updateConnections();
+
+		phaseFollower.process();
 
 		int initialStep[2];
 
@@ -109,14 +115,20 @@ struct SwitchN2 : Module {
 			trigged = true;
 		}
 
-		if (cvConnected) {
-			float cv = inputs[CV_INPUT].getVoltage();
+		if (phaseConnected) {
+			float phase = inputs[PHASE_INPUT].getVoltage();
 			for(int c = 0; c < 2; c++) {
-				stepOffset[c] = std::floor(cv * (channels[c] / 10.f));
+				stepOffset[c] = std::floor(phase * (channels[c] / 10.f));
 				
 				if(step[c] + stepOffset[c] != initialStep[c]) {
-					cvTrigger[c].trigger(32);
-					trigged = true;
+					if(phaseFollower.isSynced()) {
+						int duration = floor((phaseFollower.getDuration() / (float) channels[c]) / 2);
+						phaseTrigger[c].trigger(duration);
+					}
+					else {
+						phaseTrigger[c].trigger(32);
+						trigged = true;
+					}
 				}
 			}
 		}
@@ -162,8 +174,8 @@ struct SwitchN2 : Module {
 			}
 		}
 
-		outputs[TRIG_A_OUTPUT].setVoltage(fmax(maxVoltage, cvTrigger[0].process(1.f) ? 10.f : 0.f));
-		outputs[TRIG_B_OUTPUT].setVoltage(fmax(maxVoltage, cvTrigger[1].process(1.f) ? 10.f : 0.f));
+		outputs[TRIG_A_OUTPUT].setVoltage(fmax(maxVoltage, phaseTrigger[0].process(1.f) ? 10.f : 0.f));
+		outputs[TRIG_B_OUTPUT].setVoltage(fmax(maxVoltage, phaseTrigger[1].process(1.f) ? 10.f : 0.f));
 
 		if(lightUpdater.process()) updateLights();
 	}
@@ -202,7 +214,7 @@ struct SwitchN2 : Module {
 	void updateConnections() {
 		inputConnected[0] = inputs[POLYIN_A_INPUT].isConnected();
 		inputConnected[1] = inputs[POLYIN_B_INPUT].isConnected();
-		cvConnected = inputs[CV_INPUT].isConnected();
+		phaseConnected = inputs[PHASE_INPUT].isConnected();
 		increaseConnected = inputs[STEPINC_INPUT].isConnected();
 		decreaseConnected = inputs[STEPDEC_INPUT].isConnected();
 		randomConnected = inputs[RANDOM_INPUT].isConnected();
@@ -256,7 +268,7 @@ struct SwitchN2Widget : ModuleWidget {
 		addInput(inputB);
 
 		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 38.200)), module, SwitchN2::RESET_INPUT));
-		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 51.100)), module, SwitchN2::CV_INPUT));
+		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 51.100)), module, SwitchN2::PHASE_INPUT));
 		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 65.000)), module, SwitchN2::STEPINC_INPUT));
 		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 79.146)), module, SwitchN2::STEPDEC_INPUT));
 		addInput(createInputCentered<SmallPort>(mm2px(Vec(7.699, 92.700)), module, SwitchN2::RANDOM_INPUT));
