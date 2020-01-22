@@ -118,7 +118,7 @@ struct SwitchN2 : Module {
 		if (phaseConnected) {
 			float phase = inputs[PHASE_INPUT].getVoltage();
 			for(int c = 0; c < 2; c++) {
-				stepOffset[c] = std::floor(phase * (channels[c] / 10.f));
+				stepOffset[c] = phase < 10.f ? std::floor(phase * (channels[c] / 10.f)) : channels[c] - 1;
 				
 				if(step[c] + stepOffset[c] != initialStep[c]) {
 					if(phaseFollower.isSynced()) {
