@@ -11,7 +11,7 @@
   "manualUrl": "https://github.com/23volts/23volts-vcv",
   "sourceUrl": "https://github.com/23volts/23volts-vcv",
   "donateUrl": "https://paypal.me/23volts",
-  "changelogUrl": "https://github.com/23volts/23volts-vcv/CHANGELOG.md",
+  "changelogUrl": "https://github.com/23volts/23volts-vcv/blob/master/CHANGELOG.md",
   "modules": [
     {
       "slug": "Mem",
