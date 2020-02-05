@@ -1,3 +1,7 @@
+### 1.1.4 (2019-02-05)
+- Morph & Multimap : Fix knob glitch when mapped value closes to 0
+
+
 ### 1.1.3 (2019-01-20)
 - Morph : Add option to reverse Y AXIS for MIDI control
 - Multimap : Fix bank switching's color update when using CV & FIRST inputs
