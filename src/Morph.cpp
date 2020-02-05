@@ -42,10 +42,12 @@ struct Morph : Module {
 
 	ParameterSnapshot snapshots[4];
 
-	float offsetX = 0;
-	float offsetY = 0;
-	float selectorX = 0;
-	float selectorY = 0;
+	float offsetX = 0.f;
+	float offsetY = 0.f;
+	float lastOffsetX = 0.f;
+	float lastOffsetY = 0.f;
+	float selectorX = 0.f;
+	float selectorY = 0.f;
 	float maxX;
 	float maxY;
 
@@ -116,17 +118,27 @@ struct Morph : Module {
 			} 
 		}
 
+		if(inputX || inputY) writingSnapshot = -1;
+
 		if(inputX) {
 			float X_inputValue = math::clamp(inputs[X_CV_INPUT].getVoltage(), -10.f, 10.f);
 			offsetX = (X_inputValue / 10.f) * maxX;
+			if(offsetX != lastOffsetX) {
+				changed = true;
+				lastOffsetX = offsetX;
+			}
 		}
 
 		if(inputY) {
 			float Y_inputValue = math::clamp(inputs[Y_CV_INPUT].getVoltage(), -10.f, 10.f);
 			offsetY = - ((Y_inputValue / 10.f) * maxY);
+			if(offsetY != lastOffsetY) {
+				changed =true;
+				lastOffsetY = offsetY;
+			}
 		}
 
-		if(changed || inputX || inputY) updateParameters();
+		if(changed) updateParameters();
 
 		for (int x = 0; x < 8; x++) {
 			outputs[OUTPUTS + x].setVoltage(params[KNOB_PARAMS + x].getValue());

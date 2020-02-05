@@ -1,6 +1,6 @@
 ### 1.1.4 (2019-02-05)
 - Morph & Multimap : Fix knob glitch when mapped value closes to 0
-
+- Morph : Disable autolearn when X or Y CV input is connected
 
 ### 1.1.3 (2019-01-20)
 - Morph : Add option to reverse Y AXIS for MIDI control
