@@ -4,10 +4,10 @@
 # https://aka.ms/yaml
 
 trigger:
-- dev
+- master
 
 pr:
-- dev
+- master
 
 jobs:
 - job: Build
