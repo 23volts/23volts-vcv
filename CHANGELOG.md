@@ -1,3 +1,6 @@
+### 1.1.5 (2019-02-16)
+- PolyMerge : fix ordering of polyphonic inputs
+
 ### 1.1.4 (2019-02-05)
 - Morph & Multimap : Fix knob glitch when mapped value closes to 0
 - Morph : Disable autolearn when X or Y CV input is connected

@@ -28,22 +28,36 @@ struct PolyMerge : Module {
 		
 		if(outputs[POLY_OUTPUT].isConnected() == false) return;
 
-		int realChannels = 0;
-		for(int i = 0; i < activeInputs; i++) {
-			if(inputs[INPUTS + i].isConnected() == false) continue;
-
-			realChannels = i * voices;
-
-			int inputChannels = inputs[INPUTS + i].getChannels();
-
-			for(int c = 0; c < inputChannels && c < voices; c++) {
-				float voltage = inputs[INPUTS + i].getVoltage(c);
-				outputs[POLY_OUTPUT].setVoltage(voltage, realChannels + c);
-				realChannels++;
+		// First, find the last connected input
+		int lastConnectedActiveInput = -1;
+		for(int x = activeInputs - 1; x >= 0; x--) {
+			if(inputs[INPUTS + x].isConnected() && lastConnectedActiveInput == -1) {
+				lastConnectedActiveInput = x;
+				x = -1;
 			}
 		}
 
-		outputs[POLY_OUTPUT].channels = realChannels;
+		int currentOutputChannel = 0; // O
+
+		for(int i = 0; i <= lastConnectedActiveInput; i++) {
+			
+			if(inputs[INPUTS + i].isConnected() == false) {
+				for(int c = 0; c < voices; c++) {
+					outputs[POLY_OUTPUT].setVoltage(0.f, currentOutputChannel);
+					currentOutputChannel++;
+				}
+			}
+			else {
+				int inputChannels = inputs[INPUTS + i].getChannels();
+				for(int c = 0; c < voices; c++) {
+					float voltage = c <= inputChannels ? inputs[INPUTS + i].getVoltage(c) : 0.f;
+					outputs[POLY_OUTPUT].setVoltage(voltage, currentOutputChannel);
+					currentOutputChannel++;
+				}
+			}
+		}
+
+		outputs[POLY_OUTPUT].channels = currentOutputChannel + 1;
 	}
 
 	void setVoicePerChannel(int newVoices) {
