@@ -16,7 +16,7 @@ struct PolyMerge : Module {
 	enum LightIds {
 		NUM_LIGHTS
 	};
-	
+
 	int activeInputs = 8;
 	int voices = 2;
 
@@ -25,7 +25,7 @@ struct PolyMerge : Module {
 	}
 
 	void process(const ProcessArgs& args) override {
-		
+
 		if(outputs[POLY_OUTPUT].isConnected() == false) return;
 
 		// First, find the last connected input
@@ -40,7 +40,7 @@ struct PolyMerge : Module {
 		int currentOutputChannel = 0; // O
 
 		for(int i = 0; i <= lastConnectedActiveInput; i++) {
-			
+
 			if(inputs[INPUTS + i].isConnected() == false) {
 				for(int c = 0; c < voices; c++) {
 					outputs[POLY_OUTPUT].setVoltage(0.f, currentOutputChannel);
@@ -57,7 +57,7 @@ struct PolyMerge : Module {
 			}
 		}
 
-		outputs[POLY_OUTPUT].channels = currentOutputChannel + 1;
+		outputs[POLY_OUTPUT].setChannels(currentOutputChannel);
 	}
 
 	void setVoicePerChannel(int newVoices) {
@@ -125,7 +125,7 @@ struct PolyMergeWidget : ModuleWidget {
 			for(int x = 0; x < 8; x++) {
 				if(x < m->activeInputs) {
 					inputs[x]->activeChannels =  m->voices;
-					inputs[x]->visible = true;	
+					inputs[x]->visible = true;
 				}
 				else {
 					inputs[x]->activeChannels = 0;
@@ -140,7 +140,7 @@ struct PolyMergeWidget : ModuleWidget {
 	}
 
 	void appendContextMenu(Menu* menu) override {
-		
+
 		PolyMerge* module = getModule();
 
 		menu->addChild(new MenuSeparator);
