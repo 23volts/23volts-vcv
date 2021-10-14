@@ -21,7 +21,7 @@ struct LedButton : Switch {
 	void onChange(const event::Change& e) override {
 		Switch::onChange(e);
 		std::vector<float> brightnesses;
-		brightnesses.push_back(paramQuantity->isMax() ? 1.0f : 0.f);
+		brightnesses.push_back(getParamQuantity()->isMax() ? 1.0f : 0.f);
 		light->setBrightnesses(brightnesses);
 	}
 };
@@ -42,7 +42,7 @@ struct DynamicLedButton : Switch {
 	void onChange(const event::Change& e) override {
 		Switch::onChange(e);
 		std::vector<float> brightnesses;
-		light->setBrightness(paramQuantity->isMax() ? 1.0f : 0.f);
+		light->setBrightness(getParamQuantity()->isMax() ? 1.0f : 0.f);
 	}
 };
 
@@ -78,7 +78,7 @@ struct TextLightButton : DynamicLedButton {
 
 	void onChange(const event::Change& e) override {
 		DynamicLedButton::onChange(e);
-		textColor = paramQuantity->isMax() ? light->bgColor : light->baseColor;
+		textColor = getParamQuantity()->isMax() ? light->bgColor : light->baseColor;
 	}
 
 	void draw(const DrawArgs &args) override {

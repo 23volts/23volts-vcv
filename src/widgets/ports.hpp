@@ -114,7 +114,7 @@ struct PolyLightPort : rack::app::SvgPort {
 
 		int channels; 
 		
-		if (type == OUTPUT) {
+		if (type == rack::engine::Input::OUTPUT) {
 			channels = module ? module->outputs[portId].getChannels() : TChannels;
 		}
 		else {

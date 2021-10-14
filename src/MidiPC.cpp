@@ -77,7 +77,7 @@ struct MidiPC : Module {
 			updateMidiStatus();
 			if(midiIO.input.isConnected()) {
 				midi::Message msg;
-				while (midiIO.input.shift(&msg)) {
+				while (midiIO.input.tryPop(&msg, args.frame)) {
 					processMessage(msg);
 				}
 			}

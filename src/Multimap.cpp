@@ -172,7 +172,7 @@ struct Multimap : Module {
 			mappingProcessor.processMidiInput = true;
 		}
 
-		mappingProcessor.process();
+		mappingProcessor.process(args.frame);
 
 		if(outputs[POLY_CV_OUTPUT].isConnected()) {
 			outputs[POLY_CV_OUTPUT].channels = 16;

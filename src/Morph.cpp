@@ -144,7 +144,7 @@ struct Morph : Module {
 			outputs[OUTPUTS + x].setVoltage(params[KNOB_PARAMS + x].getValue());
 		}
 
-		mappingProcessor.process();
+		mappingProcessor.process(args.frame);
 	}
 
 	void updateSnapshot() {

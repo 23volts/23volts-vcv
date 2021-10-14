@@ -137,8 +137,8 @@ struct HandleMapCollection : ParamMapCollection {
 		return param2handle.find(paramId) != param2handle.end();
 	}
 
-	virtual void commitLearn(int paramId, int targetModuleId, int targetParamId) {
-
+	virtual void commitLearn(int paramId, uint64_t targetModuleId, int targetParamId) {
+		
 		if(! isAssigned(paramId)) {
 			param2handle[paramId] = ParamMapping();
 			param2handle[paramId].paramHandle.color = SCHEME_YELLOW;
@@ -146,15 +146,15 @@ struct HandleMapCollection : ParamMapCollection {
 		}
 
 		ParamMapping* mapping = &param2handle[paramId];
-
+		
 		APP->engine->updateParamHandle(&mapping->paramHandle, targetModuleId, targetParamId, true);
-
+		
 		ModuleWidget *moduleWidget = APP->scene->rack->getModule(targetModuleId);
 		Module *targetModule = moduleWidget->module;
+		
 		ParamQuantity *paramQuantity = targetModule->paramQuantities[targetParamId];
 		mapping->moduleName = moduleWidget->model->name;
-		mapping->paramName = paramQuantity->label;
-
+		mapping->paramName = paramQuantity->getLabel();
 		learnNext();
 	}
 
@@ -283,7 +283,7 @@ struct MultiHandleMapCollection : HandleMapCollection {
 		return pages[currentPage]->param2handle.find(paramId) != pages[currentPage]->param2handle.end();
 	}
 
-	void commitLearn(int paramId, int targetModuleId, int targetParamId) override {
+	void commitLearn(int paramId, uint64_t targetModuleId, int targetParamId) override {
 		pages[currentPage]->commitLearn(paramId, targetModuleId, targetParamId);
 		learnNext();
 	}
@@ -518,20 +518,20 @@ struct MappingProcessor {
 		divider.setDivision(32);
 	}
 
-	void process() {
+	void process(int64_t frame) {
 		if(divider.process()) {
-			if(midiIO && midiMap && processMidiInput && midiIO->input.isConnected()) processMidiQueue();
+			if(midiIO && midiMap && processMidiInput && midiIO->input.isConnected()) processMidiQueue(frame);
 			if(handleMap) processHandledParameters();
 			if(midiIO && midiMap && midiIO->output.isConnected()) processMidiFeedback();
 		}
 	}
 
-	void processMidiQueue() {
+	void processMidiQueue(int64_t frame) {
 		bool learning = midiMap->isLearningEnabled() && midiMap->learningParamId > -1;
 
 		// Scan midi input and update params & button states
 		midi::Message msg;
-		while (midiIO->input.shift(&msg)) {
+		while (midiIO->input.tryPop(&msg, frame)) {
 
 			if (learning == true) {
 				midiMap->onMidiMessage(msg);
@@ -664,7 +664,7 @@ template <typename TBase = KnobWhite32>
 struct MappableParameter : TBase {
 	using TBase::box;
 	using TBase::addChild;
-	using TBase::paramQuantity;
+	//using TBase::paramQuantity;
 
 	int paramId;
 	Module* module = NULL;
@@ -686,12 +686,13 @@ struct MappableParameter : TBase {
 	void step() override {
 		if(handleMap && handleMap->isLearning(paramId)) {
 			ParamWidget *touchedParam = APP->scene->rack->touchedParam;
-			if (touchedParam && touchedParam->paramQuantity->module != module) {
+			if (touchedParam && touchedParam->getParamQuantity()->module != module) {
 				APP->scene->rack->touchedParam = NULL;
-				int targetModuleId = touchedParam->paramQuantity->module->id;
-				int targetParamId = touchedParam->paramQuantity->paramId;
+				//int targetModuleId = touchedParam->getParamQuantity()->module->id;
+				int64_t targetModuleId = touchedParam->module->id;
+				int targetParamId = touchedParam->getParamQuantity()->paramId;
 				handleMap->commitLearn(paramId, targetModuleId, targetParamId);
-				paramQuantity->setScaledValue(touchedParam->paramQuantity->getScaledValue());
+				TBase::getParamQuantity()->setScaledValue(touchedParam->getParamQuantity()->getScaledValue());
 			}
 		}
 		TBase::step();

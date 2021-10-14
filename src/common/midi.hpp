@@ -13,7 +13,7 @@ struct MidiOutput : rack::dsp::MidiGenerator<rack::PORT_MAX_CHANNELS>, rack::mid
 		return driverId > -1 && deviceId > -1;
 	}
 
-	void onMessage(rack::midi::Message message) override {
+	void onMessage(const rack::midi::Message &message) override {
 		rack::midi::Output::sendMessage(message);
 	}
 
@@ -23,7 +23,7 @@ struct MidiOutput : rack::dsp::MidiGenerator<rack::PORT_MAX_CHANNELS>, rack::mid
 	}
 
 	// Workaround for sending message on multiple channels
-	void sendRawMessage(rack::midi::Message &message) {
+	void sendRawMessage(const rack::midi::Message& message) {
 		//DEBUG("Midi Message sent %02x %02x %02x", message.bytes[0], message.bytes[1], message.bytes[2]);
 		if (outputDevice) {
 			outputDevice->sendMessage(message);
