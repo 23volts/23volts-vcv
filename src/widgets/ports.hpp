@@ -62,14 +62,6 @@ struct PolyLightPort : rack::app::SvgPort {
 		setSvg(APP->window->loadSvg(asset::system("res/ComponentLibrary/PJ301M.svg")));
 	}
 
-	~PolyLightPort() {
-		if(created) {
-			for (int i = 0; i < TChannels; i++) {
-				delete lights[i];
-			}
-		}
-	}
-
 	void setActiveChannels(int channels) {
 		activeChannels = channels <= TChannels ? channels : TChannels;
 	}
@@ -88,6 +80,7 @@ struct PolyLightPort : rack::app::SvgPort {
 			TinyLight<DynamicLight>* light = new TinyLight<DynamicLight>;
 			light->box.pos = Vec(xPos + 10.5f, 10.75f - yPos);
 			lights[i] = light;
+			this->addChild(light);
 		}
 		created = true;
 	}
