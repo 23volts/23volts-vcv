@@ -6,7 +6,7 @@
 struct MonoPoly : Module {
 
 	static const int CHANNELS = 2;
-	static const int INITIAL_STEPS = 15;
+	static const int INITIAL_STEPS = 16;
 
 	enum ParamIds {
 		ENUMS(STEP_KNOBS, CHANNELS),
@@ -36,7 +36,7 @@ struct MonoPoly : Module {
 	MonoPoly() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		for(int x = 0; x < CHANNELS; x++) {
-			configParam(STEP_KNOBS + x, 0.0f, 15.0f, (float) INITIAL_STEPS, "Number of channels");
+			configParam(STEP_KNOBS + x, 1.0f, 16.0f, (float) INITIAL_STEPS, "Number of channels");
 			inputConnected[x] = false;
 			outputConnected[x] = false;
 		}
@@ -62,14 +62,14 @@ struct MonoPoly : Module {
 	void updateSteps() {
 		for(int x = 0; x < CHANNELS; x++) {
 			steps[x] = getChannelSteps(x); 
-			outputs[x].setChannels(steps[x] + 1);	
+			outputs[x].setChannels(steps[x]);	
 		}
 	}
 
 	int getChannelSteps(int channel) {
 		if(cvConnected[channel]) {
 			float inputValue = math::clamp(inputs[CV_INPUTS + channel].getVoltage(), 0.f, 10.f);
-			int steps = (int) rescale(inputValue, 0.f, 10.f, 0.f, 15.f);
+			int steps = (int) rescale(inputValue, 0.f, 10.f, 1.f, 16.f);
 			return steps;
 		}
 		else {
